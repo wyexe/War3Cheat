@@ -19,9 +19,9 @@ VOID CExpr::Release()
 
 VOID CExpr::Help(CONST std::vector<std::wstring>& Vec)
 {
-	for (auto& itm : Vec)
+	for (auto& itm : GetVec())
 	{
-		LOG_C_D(L"MethodName=%s", itm.c_str());
+		LOG_C_D(L"MethodName=%s", itm.wsFunName.c_str());
 	}
 }
 
@@ -31,6 +31,7 @@ std::vector<MyTools::ExpressionFunPtr>& CExpr::GetVec()
 	{
 		{ std::bind(&CExpr::PrintSelectedObject,this, std::placeholders::_1) , L"PrintSelectedObject" },
 		{ std::bind(&CExpr::SetHeroPowerType,this, std::placeholders::_1) , L"SetHeroPowerType" },
+		{ std::bind(&CExpr::SetSelectedObjectInvincible,this, std::placeholders::_1) , L"SetSelectedObjectInvincible" },
 		{ std::bind(&CExpr::CloseSkillCool,this, std::placeholders::_1) , L"CloseSkillCool" },
 		{ std::bind(&CExpr::TestPtr,this, std::placeholders::_1) , L"TestPtr" },
 		{ std::bind(&CExpr::Help,this, std::placeholders::_1) , L"Help" },

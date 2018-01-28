@@ -45,7 +45,7 @@ DWORD CFindGameObject::GetGameObjectRoot() CONST
 
 DWORD CFindGameObject::GetGameObjectAddr(_In_ DWORD dwNodeBase) CONST
 {
-	return ReadDWORD(dwNodeBase + 0x238);
+	return ReadDWORD(ReadDWORD(ReadDWORD(dwNodeBase + 0x3C4) + 0x130) + 0x124);
 }
 
 CONST std::wstring& CFindGameObject::GetSelectedObjectName() CONST
@@ -147,7 +147,7 @@ VOID CFindGameObject::GetGameObjectName(_In_ DWORD dwNodeBase)
 	6F2F85AA  |.  8BCD          mov     ecx, ebp
 	
 	*/
-	DWORD dwNameObject = ReadDWORD(ReadDWORD(ReadDWORD(GetGameObjectAddr(dwNodeBase) + 0x3C4) + 0x130) + 0x124);
+	DWORD dwNameObject = GetGameObjectAddr(dwNodeBase);
 	if (dwNameObject == NULL)
 	{
 		LOG_C_E(L"UnExist Name[%X]", dwNodeBase);
