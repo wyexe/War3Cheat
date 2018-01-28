@@ -22,6 +22,9 @@
     <Filter Include="Feature\Expr">
       <UniqueIdentifier>{f0a674af-3f26-4750-8fbc-78b8f3dfbb87}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Feature\Object">
+      <UniqueIdentifier>{02bf2949-e784-4b28-8f9d-fc4cad64d849}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -90,6 +93,9 @@
     <ClInclude Include="..\..\MyTools\MyTools\LdrHeader.h">
       <Filter>MyTools</Filter>
     </ClInclude>
+    <ClInclude Include="FindGameObject.h">
+      <Filter>Feature\Object</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -154,6 +160,9 @@
     </ClCompile>
     <ClCompile Include="..\..\MyTools\MyTools\LdrHeader.cpp">
       <Filter>MyTools</Filter>
+    </ClCompile>
+    <ClCompile Include="FindGameObject.cpp">
+      <Filter>Feature\Object</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -6,6 +6,7 @@
 #include <MyTools/CLHook.h>
 #include <MyTools/CLAsync.h>
 #include <MyTools/LdrHeader.h>
+#include "FindGameObject.h"
 #define _SELF L"Expr.cpp"
 
 
@@ -28,7 +29,7 @@ std::vector<MyTools::ExpressionFunPtr>& CExpr::GetVec()
 {
 	static std::vector<MyTools::ExpressionFunPtr> Vec = 
 	{
-		{ std::bind(&CExpr::FindHero,this, std::placeholders::_1) , L"FindHero" },
+		{ std::bind(&CExpr::PrintSelectedObject,this, std::placeholders::_1) , L"PrintSelectedObject" },
 		{ std::bind(&CExpr::SetHeroPowerType,this, std::placeholders::_1) , L"SetHeroPowerType" },
 		{ std::bind(&CExpr::CloseSkillCool,this, std::placeholders::_1) , L"CloseSkillCool" },
 		{ std::bind(&CExpr::TestPtr,this, std::placeholders::_1) , L"TestPtr" },
@@ -72,38 +73,106 @@ VOID GetHeroName(_In_ DWORD dwObj, _In_ CHAR* szText)
 	}
 }
 
+DWORD GetBuildName(_In_ DWORD dwObj)
+{
+	static DWORD dwGameObjectNameCALL = NULL;
+	if (dwGameObjectNameCALL == NULL)
+	{
+		dwGameObjectNameCALL = MyTools::CLSearchBase::FindCALL("68000200008D44240C", 0x6F346A48 - 0x6F346A61, (DWORD)::GetModuleHandleW(L"Game.dll"), 1, 0, L"Game.dll");
+		if (dwGameObjectNameCALL == NULL)
+		{
+			LOG_C_E(L"dwGameObjectNameCALL=NULL");
+			return 0;
+		}
+	}
+
+	__try
+	{
+		DWORD dwNamePtr = NULL;
+		_asm
+		{
+			PUSHAD;
+			MOV ECX, dwObj;
+			MOV EDI, DWORD PTR DS : [ECX + 0x30];
+			MOV ECX, EDI;
+			MOV EAX, dwGameObjectNameCALL;
+			CALL EAX;
+			MOV dwNamePtr, EAX;
+			POPAD;
+		}
+		return dwNamePtr;
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+		LOG_C_E(L"Exception GetHeroName");
+	}
+	return 0;
+}
+
+void PrintName(_In_ DWORD dwNodeBase, _In_ DWORD dwObj)
+{
+	std::wstring wsName;
+	DWORD dwNameFlag = (ReadDWORD(dwObj + 0x30) >> 0x18);
+	if (dwNameFlag != NULL)
+	{
+		CHAR szText[MAX_PATH] = { 0 };
+		if ((dwNameFlag - 0x41) < 0x19)
+		{
+			GetHeroName(dwObj, szText);
+		}
+		else
+		{
+			DWORD dwNamePtr = GetBuildName(dwObj);
+			if (dwNamePtr != NULL)
+			{
+				MyTools::CCharacter::strcpy_my(szText, reinterpret_cast<CONST CHAR*>(dwNamePtr), 32);
+			}
+		}
+
+		if (szText[0] != '\0')
+		{
+			WCHAR wszText[MAX_PATH];
+			MyTools::CCharacter::UTF8ToUnicode(wszText, szText);
+			wsName = wszText;
+			dwHeroObjectAddr = dwObj;
+		}
+		LOG_C_D(L"itm.Base=[%X], ObjectAddr=[%X],dwNameFlag=%X, Name=[%s], HP=[%d/%d], MP=[%d/%d]",
+			dwNodeBase,
+			dwObj,
+			dwNameFlag,
+			wsName.c_str(),
+			ReadDWORD(dwNodeBase + 0x248),
+			ReadDWORD(dwNodeBase + 0x248 + 0x4),
+			ReadDWORD(dwNodeBase + 0x248 + 0x8),
+			ReadDWORD(dwNodeBase + 0x248 + 0xC));
+	}
+}
+
 static DWORD dwHeroObjectAddr;
 BOOL TraverseGameObject(_In_ DWORD dwNodeBase)
 {
 	if ((ReadDWORD(dwNodeBase + 0xB0) & 3) == 0)
 	{
-		std::wstring wsName;
 		DWORD dwObj = ReadDWORD(dwNodeBase + 0x238);
-		if (dwObj != NULL && ReadDWORD(dwObj) != NULL && ReadDWORD(dwNodeBase + 0x248) != NULL && ReadDWORD(dwNodeBase + 0x248 + 0xC) != NULL)
+		DWORD dwBuildObj = ReadDWORD(ReadDWORD(ReadDWORD(dwNodeBase + 0x3C4) + 0x130) + 0x124);
+		if (dwObj != NULL)
 		{
-			CHAR szText[MAX_PATH] = { 0 };
-			GetHeroName(dwObj, szText);
-			if (szText[0] != '\0')
+			LOG_C_D(L"Hero.dwNodeBase=%X,dwObj=%X", dwNodeBase, dwObj);
+			PrintName(dwNodeBase, dwObj);
+		}
+		if (dwBuildObj != NULL)
+		{
+			LOG_C_D(L"Build.dwNodeBase=%X,dwBuildObj=%X", dwNodeBase, dwBuildObj);
+			if (dwBuildObj != NULL)
 			{
-				WCHAR wszText[MAX_PATH];
-				MyTools::CCharacter::UTF8ToUnicode(wszText, szText);
-				wsName = wszText;
-				dwHeroObjectAddr = dwObj;
+				PrintName(dwNodeBase, dwBuildObj);
 			}
 		}
-		LOG_C_D(L"itm.Base=[%X], ObjectAddr=[%X], Name=[%s], HP=[%d/%d], MP=[%d/%d]", 
-			dwNodeBase,
-			dwObj, 
-			wsName.c_str(), 
-			ReadDWORD(dwNodeBase + 0x248), 
-			ReadDWORD(dwNodeBase + 0x248 + 0x4),
-			ReadDWORD(dwNodeBase + 0x248 + 0x8), 
-			ReadDWORD(dwNodeBase + 0x248 + 0xC));
 	}
-
+	
 
 	int nNextNodeBase = static_cast<int>(ReadDWORD(dwNodeBase + 0x1C));
-	while (nNextNodeBase > 0)
+	while (nNextNodeBase > 0 && dwHeroObjectAddr == NULL)
 	{
 		TraverseGameObject(ReadDWORD(nNextNodeBase + 0xC));
 		nNextNodeBase = static_cast<int>(ReadDWORD(nNextNodeBase + 0x8));
@@ -111,30 +180,47 @@ BOOL TraverseGameObject(_In_ DWORD dwNodeBase)
 	return TRUE;
 }
 
-VOID CExpr::FindHero(_In_ CONST std::vector<std::wstring>&)
+VOID CExpr::PrintSelectedObject(_In_ CONST std::vector<std::wstring>&)
 {
-	static DWORD dwGameObjectRoot = NULL;
-	if (dwGameObjectRoot == NULL)
+	CFindGameObject FindGameObject;
+	DWORD dwGameNodeBase = FindGameObject.FindSelectedObject();
+	if (dwHeroObjectAddr == NULL)
 	{
-		dwGameObjectRoot = MyTools::CLSearchBase::FindBase("EB02DDD88B0D????????3B", 0x267EDBE - 0x267EDC2, 2, 0, L"Game.dll");
-		if (dwGameObjectRoot == NULL)
-		{
-			LOG_C_E(L"dwGameObjectRoot=NULL");
-			return;
-		}
+		dwHeroObjectAddr = FindGameObject.GetGameObjectAddr(dwGameNodeBase);
+		LOG_C_D(L"Set Hero[%s].dwNodeBase=%X, ObjAddr=%X", FindGameObject.GetSelectedObjectName().c_str(), dwGameNodeBase, dwHeroObjectAddr);
 	}
-
-	TraverseGameObject(ReadDWORD(dwGameObjectRoot));
-	LOG_C_D(L"Find Hero = %X", dwHeroObjectAddr);
+	else
+	{
+		LOG_C_D(L"Selected[%s].dwNodeBase=%X, ObjAddr=%X", FindGameObject.GetSelectedObjectName().c_str(), dwGameNodeBase, FindGameObject.GetGameObjectAddr(dwGameNodeBase));
+	}
 }
 
 VOID CExpr::SetHeroPowerType(_In_ CONST std::vector<std::wstring>& Vec)
 {
-	DWORD dwHeroArmorAddr = dwHeroObjectAddr + 0xE4;
+	if (Vec.empty())
+	{
+		LOG_C_E(L"Param=ObjectAddr");
+		return;
+	}
+
+	DWORD dwObjectAddr = std::stol(Vec.at(0), nullptr, 16);
+	DWORD dwHeroArmorAddr = dwObjectAddr + 0xE4;
 	MyTools::CCharacter::WriteDWORD(dwHeroArmorAddr, 0x6);
 
-	DWORD dwHeroAttackAddr = ReadDWORD(dwHeroObjectAddr + 0x1E8) + 0xF4;
+	DWORD dwHeroAttackAddr = ReadDWORD(dwObjectAddr + 0x1E8) + 0xF4;
 	MyTools::CCharacter::WriteDWORD(dwHeroAttackAddr, 0x5);
+}
+
+VOID CExpr::SetSelectedObjectInvincible(_In_ CONST std::vector<std::wstring>& Vec)
+{
+	if (Vec.empty())
+	{
+		LOG_C_E(L"Param=ObjectAddr");
+		return;
+	}
+
+	DWORD dwObjectAddr = std::stol(Vec.at(0), nullptr, 16);
+	MyTools::CCharacter::WriteBYTE(dwObjectAddr + 0x20, 0xE);
 }
 
 static BOOL bRunSkillChecker = FALSE;
@@ -252,6 +338,27 @@ __declspec(naked) VOID WINAPI HookSkill()
 
 VOID CExpr::CloseSkillCool(_In_ CONST std::vector<std::wstring>& Vec)
 {
+	/*
+		6F05C9AD | .  85C0          test    eax, eax;                   ; 85C075??D9442408D905
+		6F05C9AF | .  75 24         jnz     short 6F05C9D5
+		6F05C9B1 | .D94424 08     fld     dword ptr[esp + 8]
+		6F05C9B5 | .D905 70E4AA6F fld     dword ptr[6FAAE470]
+		6F05C9BB | .DED9          fcompp
+		6F05C9BD | .DFE0          fstsw   ax
+		6F05C9BF | .F6C4 05       test    ah, 5
+		6F05C9C2 | .  7A 11         jpe     short 6F05C9D5
+		6F05C9C4 | .  8B16          mov     edx, dword ptr[esi]
+		6F05C9C6 | .  8B92 A4030000 mov     edx, dword ptr[edx + 3A4]
+		6F05C9CC | .  8D4424 08     lea     eax, dword ptr[esp + 8]
+		6F05C9D0 | .  50            push    eax
+		6F05C9D1 | .  8BCE          mov     ecx, esi
+		6F05C9D3 | .FFD2          call    edx
+		6F05C9D5 | > 5E            pop     esi
+		6F05C9D6 | .  5D            pop     ebp;						;Hook
+		6F05C9D7 | .  83C4 0C       add     esp, 0C
+		6F05C9DA  \.C3            retn
+	*/
+
 	static MyTools::MYHOOK_CONTENT HookSkillContent;
 	HookSkillContent.uNopCount = 0x0;
 	HookSkillContent.dwFunAddr = reinterpret_cast<DWORD>(HookSkill);
@@ -265,40 +372,6 @@ VOID CExpr::CloseSkillCool(_In_ CONST std::vector<std::wstring>& Vec)
 
 	MyTools::CLHook::Hook_Fun_Jmp_MyAddr(&HookSkillContent);
 	LOG_C_D(L"Hook Succ...");
-	/*if (Vec.at(0) == L"0" && HookSkillContent.dwHookAddr != NULL)
-	{
-		MyTools::CLHook::UnHook_Fun_Jmp_MyAddr(&HookSkillContent);
-		HookSkillContent.Release();
-
-		LOG_C_D(L"UnHook Succ...");
-	}
-	else if (Vec.at(0) == L"1" && HookSkillContent.dwHookAddr == NULL)
-	{
-		/ *
-		6F05C9AD  |.  85C0          test    eax, eax                                       ;  85C075??D9442408D905
-		6F05C9AF  |.  75 24         jnz     short 6F05C9D5
-		6F05C9B1  |.  D94424 08     fld     dword ptr [esp+8]
-		6F05C9B5  |.  D905 70E4AA6F fld     dword ptr [6FAAE470]
-		6F05C9BB  |.  DED9          fcompp
-		6F05C9BD  |.  DFE0          fstsw   ax
-		6F05C9BF  |.  F6C4 05       test    ah, 5
-		6F05C9C2  |.  7A 11         jpe     short 6F05C9D5
-		6F05C9C4  |.  8B16          mov     edx, dword ptr [esi]
-		6F05C9C6  |.  8B92 A4030000 mov     edx, dword ptr [edx+3A4]
-		6F05C9CC  |.  8D4424 08     lea     eax, dword ptr [esp+8]
-		6F05C9D0  |.  50            push    eax
-		6F05C9D1  |.  8BCE          mov     ecx, esi
-		6F05C9D3  |.  FFD2          call    edx
-		6F05C9D5  |>  5E            pop     esi
-		6F05C9D6  |.  5D            pop     ebp                                            ;  Hook
-		6F05C9D7  |.  83C4 0C       add     esp, 0C
-		6F05C9DA  \.  C3            retn
-
-
-		* /
-
-		
-	}*/
 }
 
 BOOL g_PushF2 = FALSE;
@@ -393,15 +466,6 @@ BOOL WINAPI PeekMessage_(_Out_ LPMSG lpMsg, _In_opt_ HWND hWnd, _In_ UINT wMsgFi
 
 VOID CExpr::TestPtr(_In_ CONST std::vector<std::wstring>& Vec)
 {
-	if (dwHeroObjectAddr == NULL)
-	{
-		FindHero(Vec);
-		if (dwHeroObjectAddr == NULL)
-		{
-			return;
-		}
-	}
-
 	SetHeroPowerType(Vec);
 	CloseSkillCool(Vec);
 	
