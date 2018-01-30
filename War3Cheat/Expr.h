@@ -16,9 +16,11 @@ public:
 
 	virtual std::vector<MyTools::ExpressionFunPtr>& GetVec() override;
 private:
+	VOID SetSelectedIsHero(_In_ CONST std::vector<std::wstring>&);
+
 	VOID PrintSelectedObject(_In_ CONST std::vector<std::wstring>&);
 
-	VOID SetHeroPowerType(_In_ CONST std::vector<std::wstring>& Vec);
+	VOID SetSelectedObjectPowerType(_In_ CONST std::vector<std::wstring>& Vec);
 
 	VOID SetSelectedObjectInvincible(_In_ CONST std::vector<std::wstring>& Vec);
 

@@ -30,7 +30,8 @@ std::vector<MyTools::ExpressionFunPtr>& CExpr::GetVec()
 	static std::vector<MyTools::ExpressionFunPtr> Vec = 
 	{
 		{ std::bind(&CExpr::PrintSelectedObject,this, std::placeholders::_1) , L"PrintSelectedObject" },
-		{ std::bind(&CExpr::SetHeroPowerType,this, std::placeholders::_1) , L"SetHeroPowerType" },
+		{ std::bind(&CExpr::SetSelectedIsHero,this, std::placeholders::_1) , L"SetSelectedIsHero" },
+		{ std::bind(&CExpr::SetSelectedObjectPowerType,this, std::placeholders::_1) , L"SetSelectedObjectPowerType" },
 		{ std::bind(&CExpr::SetSelectedObjectInvincible,this, std::placeholders::_1) , L"SetSelectedObjectInvincible" },
 		{ std::bind(&CExpr::CloseSkillCool,this, std::placeholders::_1) , L"CloseSkillCool" },
 		{ std::bind(&CExpr::TestPtr,this, std::placeholders::_1) , L"TestPtr" },
@@ -42,47 +43,40 @@ std::vector<MyTools::ExpressionFunPtr>& CExpr::GetVec()
 }
 
 static DWORD dwHeroObjectAddr;
-VOID CExpr::PrintSelectedObject(_In_ CONST std::vector<std::wstring>&)
+
+VOID CExpr::SetSelectedIsHero(_In_ CONST std::vector<std::wstring>&)
 {
 	CFindGameObject FindGameObject;
 	DWORD dwGameNodeBase = FindGameObject.FindSelectedObject();
-	if (dwHeroObjectAddr == NULL)
-	{
-		dwHeroObjectAddr = FindGameObject.GetGameObjectAddr(dwGameNodeBase);
-		LOG_C_D(L"Set Hero[%s].dwNodeBase=%X, ObjAddr=%X", FindGameObject.GetSelectedObjectName().c_str(), dwGameNodeBase, dwHeroObjectAddr);
-	}
-	else
-	{
-		LOG_C_D(L"Selected[%s].dwNodeBase=%X, ObjAddr=%X", FindGameObject.GetSelectedObjectName().c_str(), dwGameNodeBase, FindGameObject.GetGameObjectAddr(dwGameNodeBase));
-	}
+	dwHeroObjectAddr = FindGameObject.GetGameObjectAddr(dwGameNodeBase);
+	LOG_C_D(L"Set Hero[%s].dwNodeBase=%X, ObjAddr=%X", FindGameObject.GetSelectedObjectName().c_str(), dwGameNodeBase, dwHeroObjectAddr);
 }
 
-VOID CExpr::SetHeroPowerType(_In_ CONST std::vector<std::wstring>& Vec)
+VOID CExpr::PrintSelectedObject(_In_ CONST std::vector<std::wstring>& Vec)
 {
-	if (Vec.empty())
-	{
-		LOG_C_E(L"Param=ObjectAddr");
-		return;
-	}
+	CFindGameObject FindGameObject;
+	DWORD dwGameNodeBase = FindGameObject.FindSelectedObject();
+	LOG_C_D(L"Selected[%s].dwNodeBase=%X, ObjAddr=%X", FindGameObject.GetSelectedObjectName().c_str(), dwGameNodeBase, FindGameObject.GetGameObjectAddr(dwGameNodeBase));
+}
 
-	DWORD dwObjectAddr = std::stol(Vec.at(0), nullptr, 16);
-	DWORD dwHeroArmorAddr = dwObjectAddr + 0xE4;
+VOID CExpr::SetSelectedObjectPowerType(_In_ CONST std::vector<std::wstring>& Vec)
+{
+	CFindGameObject FindGameObject;
+	DWORD dwGameNodeBase = FindGameObject.GetGameObjectAddr(FindGameObject.FindSelectedObject());
+
+	DWORD dwHeroArmorAddr = dwGameNodeBase + 0xE4;
 	MyTools::CCharacter::WriteDWORD(dwHeroArmorAddr, 0x6);
 
-	DWORD dwHeroAttackAddr = ReadDWORD(dwObjectAddr + 0x1E8) + 0xF4;
+	DWORD dwHeroAttackAddr = ReadDWORD(dwGameNodeBase + 0x1E8) + 0xF4;
 	MyTools::CCharacter::WriteDWORD(dwHeroAttackAddr, 0x5);
 }
 
 VOID CExpr::SetSelectedObjectInvincible(_In_ CONST std::vector<std::wstring>& Vec)
 {
-	if (Vec.empty())
-	{
-		LOG_C_E(L"Param=ObjectAddr");
-		return;
-	}
+	CFindGameObject FindGameObject;
+	DWORD dwGameNodeBase = FindGameObject.GetGameObjectAddr(FindGameObject.FindSelectedObject());
 
-	DWORD dwObjectAddr = std::stol(Vec.at(0), nullptr, 16);
-	MyTools::CCharacter::WriteBYTE(dwObjectAddr + 0x20, 0xE);
+	MyTools::CCharacter::WriteBYTE(dwGameNodeBase + 0x20, 0xE);
 }
 
 VOID CheckSkill(_In_ DWORD dwSkillObject)
@@ -100,14 +94,14 @@ VOID CheckSkill(_In_ DWORD dwSkillObject)
 			DWORD dwCount = ReadDWORD(dwAddr + 0x50);
 			DWORD dwSkillArrayAddr = ReadDWORD(dwAddr + 0x54);
 
-			if (dwSkillArrayAddr != 0 && ReadDWORD(dwSkillArrayAddr + 0x10) > 1)
+			if (dwSkillArrayAddr != 0 && (MyTools::CCharacter::ReadFloat(dwSkillArrayAddr + 0x14) > 1.0f || ReadDWORD(dwSkillArrayAddr + 0x10) > 1))
 			{
-				for (DWORD i = 0;i < dwCount; ++i)
+				for (DWORD i = 0; i < dwCount; ++i)
 				{
-					*(DWORD*)(dwSkillArrayAddr + i * 0x68 + 0x10) = 0x1;
+					*(DWORD*)(dwSkillArrayAddr + i * 0x68 + 0x10) = 0x0;
 					*(float*)(dwSkillArrayAddr + i * 0x68 + 0x14) = 1.0f;
 				}
-				
+
 				LOG_C_D(L"Set Skill Mp = 1,dwCount=%d", dwCount);
 			}
 		}
