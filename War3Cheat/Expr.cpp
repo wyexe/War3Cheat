@@ -6,6 +6,7 @@
 #include <MyTools/CLHook.h>
 #include <MyTools/CLAsync.h>
 #include <MyTools/LdrHeader.h>
+#include <MyTools/CLEchoException.h>
 #include "FindGameObject.h"
 #define _SELF L"Expr.cpp"
 
@@ -35,6 +36,8 @@ std::vector<MyTools::ExpressionFunPtr>& CExpr::GetVec()
 		{ std::bind(&CExpr::SetSelectedObjectInvincible,this, std::placeholders::_1) , L"SetSelectedObjectInvincible" },
 		{ std::bind(&CExpr::CloseSkillCool,this, std::placeholders::_1) , L"CloseSkillCool" },
 		{ std::bind(&CExpr::TestPtr,this, std::placeholders::_1) , L"TestPtr" },
+		{ std::bind(&CExpr::PrintItem,this, std::placeholders::_1) , L"PrintItem" },
+		{ std::bind(&CExpr::ChangeItem,this, std::placeholders::_1) , L"ChangeItem" },
 		{ std::bind(&CExpr::Help,this, std::placeholders::_1) , L"Help" },
 	};
 
@@ -173,6 +176,8 @@ VOID CExpr::CloseSkillCool(_In_ CONST std::vector<std::wstring>& Vec)
 	LOG_C_D(L"Hook Succ...");
 }
 
+
+
 BOOL g_PushF2 = FALSE;
 BOOL PlayerFlash(_In_ DWORD dwHookPointHeroObjectAddr, _In_ float X, _In_ float Y, _In_ float Z)
 {
@@ -261,9 +266,7 @@ BOOL WINAPI PeekMessage_(_Out_ LPMSG lpMsg, _In_opt_ HWND hWnd, _In_ UINT wMsgFi
 	}
 	return bRetCode;
 }
-
-
-VOID CExpr::TestPtr(_In_ CONST std::vector<std::wstring>& Vec)
+VOID CExpr::HookPointFlash(_In_ CONST std::vector<std::wstring>&)
 {
 	static MyTools::MYHOOK_CONTENT HookContent;
 	HookContent.uNopCount = 0x0;
@@ -282,4 +285,266 @@ VOID CExpr::TestPtr(_In_ CONST std::vector<std::wstring>& Vec)
 
 
 	LOG_C_D(L"Hook Point Done! dwHookPointAddr = %X", dwHookPointAddr);
+}
+
+
+
+/*
+6F32D3D8  |.  50            push    eax
+6F32D3D9  |.  57            push    edi
+6F32D3DA  |.  B9 2CC7AC6F   mov     ecx, 6FACC72C							   ;  ResNamePtr
+6F32D3DF  |.  E8 6CCFFEFF   call    6F31A350                                   ;  GetNameFlag2 ...
+6F32D3E4  |.  85C0          test    eax, eax
+
+--------------------------------------
+6F31A350  /$  8B41 24       mov     eax, dword ptr [ecx+24]                    ;  Flag2 = 08DB8AAE
+6F31A353  |.  83F8 FF       cmp     eax, -1
+6F31A356  |.  75 05         jnz     short 6F31A35D
+6F31A358  |.  33C0          xor     eax, eax
+6F31A35A  |.  C2 0800       retn    8
+6F31A35D  |>  8B51 1C       mov     edx, dword ptr [ecx+1C]
+6F31A360  |.  53            push    ebx
+6F31A361  |.  56            push    esi
+6F31A362  |.  8B7424 0C     mov     esi, dword ptr [esp+C]
+6F31A366  |.  23C6          and     eax, esi                                   ;  3FF
+6F31A368  |.  8D0440        lea     eax, dword ptr [eax+eax*2]                 ;  *3
+6F31A36B  |.  8D4482 04     lea     eax, dword ptr [edx+eax*4+4]
+6F31A36F  |.  8B40 04       mov     eax, dword ptr [eax+4]
+6F31A372  |.  33D2          xor     edx, edx
+6F31A374  |.  85C0          test    eax, eax
+6F31A376  |.  0F9EC2        setle   dl
+6F31A379  |.  57            push    edi
+6F31A37A  |.  83EA 01       sub     edx, 1
+6F31A37D  |.  23C2          and     eax, edx
+6F31A37F  |.  85C0          test    eax, eax
+6F31A381  |.  7E 29         jle     short 6F31A3AC
+6F31A383  |.  8B7C24 14     mov     edi, dword ptr [esp+14]
+6F31A387  |>  3970 04       /cmp     dword ptr [eax+4], esi
+6F31A38A  |.  75 07         |jnz     short 6F31A393
+6F31A38C  |.  8B50 18       |mov     edx, dword ptr [eax+18]                   ;  dd [[6FACC72C+1C]+2030]+18 = NameFlag
+6F31A38F  |.  3B17          |cmp     edx, dword ptr [edi]
+6F31A391  |.  74 1B         |je      short 6F31A3AE
+6F31A393  |>  8B59 1C       |mov     ebx, dword ptr [ecx+1C]
+6F31A396  |.  8BD6          |mov     edx, esi
+6F31A398  |.  2351 24       |and     edx, dword ptr [ecx+24]
+6F31A39B  |.  8D1452        |lea     edx, dword ptr [edx+edx*2]
+6F31A39E  |.  8D1493        |lea     edx, dword ptr [ebx+edx*4]
+6F31A3A1  |.  8B12          |mov     edx, dword ptr [edx]
+6F31A3A3  |.  03D0          |add     edx, eax
+6F31A3A5  |.  8B42 04       |mov     eax, dword ptr [edx+4]
+6F31A3A8  |.  85C0          |test    eax, eax
+6F31A3AA  |.^ 7F DB         \jg      short 6F31A387
+6F31A3AC  |>  33C0          xor     eax, eax
+6F31A3AE  |>  5F            pop     edi
+6F31A3AF  |.  5E            pop     esi
+6F31A3B0  |.  5B            pop     ebx
+6F31A3B1  \.  C2 0800       retn    8
+*/
+
+DWORD GetNamePtr(_In_ DWORD dwNameFlag, _In_ DWORD dwCALLAddr)
+{
+	__try
+	{
+		DWORD dwRetCode = 0;
+		
+		__asm
+		{
+			PUSHAD;
+
+			XOR EDX, EDX;
+			MOV ECX, dwNameFlag;
+			MOV EAX, dwCALLAddr;
+			CALL EAX;
+			MOV dwRetCode, EAX;
+			POPAD;
+		}
+
+		return dwRetCode;
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+		__asm PUSHAD;
+		LOG_C_E(L"GetNamePtr Exception, dwNameFlag=%X", dwNameFlag);
+		__asm POPAD;
+	}
+	return 0;
+}
+
+DWORD GetItemDetail(_In_ DWORD dwNameFlag, _In_ DWORD dwCALLAddr)
+{
+	__try
+	{
+		DWORD dwRetCode = 0;
+
+		__asm
+		{
+			PUSHAD;
+
+			PUSH 1;
+			XOR EDX, EDX;
+			MOV ECX, dwNameFlag;
+			MOV EAX, dwCALLAddr;
+			CALL EAX;
+			MOV dwRetCode, EAX;
+			POPAD;
+		}
+
+		return dwRetCode;
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+		__asm PUSHAD;
+		LOG_C_E(L"GetItemDetail Exception, dwNameFlag=%X", dwNameFlag);
+		__asm POPAD;
+	}
+	return 0;
+}
+
+VOID CExpr::PrintItem(_In_ CONST std::vector<std::wstring>& Vec)
+{
+	DWORD dwCALLAddr = MyTools::CLSearchBase::FindCALL("E8????????33D28BCBE8????????837C242000", 0x6F36A826 - 0x6F36A82F, (DWORD)(::GetModuleHandleW(L"Game.dll")), 1, 0, L"Game.dll");
+	if (dwCALLAddr == 0)
+	{
+		LOG_C_E(L"dwCALLAddr = 0 ");
+		return;
+	}
+
+	DWORD dwItemDetailCALLAddr = MyTools::CLSearchBase::FindCALL("6A0133D2E8????????8BD8EB", 0x6F36A841 - 0x6F36A845, (DWORD)(::GetModuleHandleW(L"Game.dll")), 1, 0, L"Game.dll");
+	if (dwItemDetailCALLAddr == 0)
+	{
+		LOG_C_E(L"dwItemDetailCALLAddr = 0 ");
+		return;
+	}
+
+	DWORD dwResNamePtr = MyTools::CLSearchBase::FindBase("B9????????E8????????85C07526", 0x6F32D3DA - 0x6F32D3DA, 1, 0, L"Game.dll", 0xFFFFFFFF);
+	LOG_C_D(L"dwResNamePtr = %X", dwResNamePtr);
+	if (dwResNamePtr == 0)
+		return;
+
+	MyTools::CLEchoException::GetInstance().InvokeAction(__FUNCTIONW__, [=]
+	{
+		DWORD dwNameFlagAddr = ReadDWORD(dwResNamePtr + 0x1C);
+		DWORD dwCount = ReadDWORD(dwResNamePtr + 0x24);
+		LOG_C_D(L"dwCount=%d", dwCount);
+		for (DWORD i = 2; i < dwCount; ++i)
+		{
+			DWORD dwNameFlagObjAddr = ReadDWORD(dwNameFlagAddr + 0xC * i + 0x8);
+			if (dwNameFlagObjAddr == 0)
+				continue;
+
+			DWORD dwNameFlag = ReadDWORD(dwNameFlagObjAddr + 0x18);
+			DWORD dwFlag2 = ReadDWORD(dwNameFlagObjAddr + 0x4);
+			if (dwNameFlag == 0 || dwFlag2 == 0)
+				continue;
+
+			if ((dwNameFlag >> 0x18) != 'I')
+				continue;
+
+			CHAR szText[32] = { 0 };
+			//dwNameFlag = (dwNameFlag & 0xFF) << 0x18 | ((dwNameFlag >> 0x8 & 0xFF) << 0x10) | ((dwNameFlag >> 0x10 & 0xFF) << 0x8) | (dwNameFlag >> 0x18 & 0xFF);
+			MyTools::CCharacter::strcpy_my(szText, reinterpret_cast<CONST CHAR*>(&dwNameFlag), 4);
+			LOG_C_D(L"dwNameFlag=[%X,%s], dwFlag2=%X", dwNameFlag, MyTools::CCharacter::UTF8ToUnicode(szText).c_str(), dwFlag2);
+
+			DWORD dwNamePtr = GetNamePtr(dwNameFlag, dwCALLAddr);
+			if (dwNamePtr != 0)
+			{
+				LOG_C_D(L"Name=%s", MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(dwNamePtr))).c_str());
+			}
+
+			DWORD dwItemDetailPtr = GetItemDetail(dwNameFlag, dwItemDetailCALLAddr);
+			if (dwItemDetailPtr != NULL)
+			{
+				LOG_C_D(L"ItemDetail=%s", MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(dwItemDetailPtr))).c_str());
+			}
+		}
+
+		/*LOG_C_D(L"-------------------------------------------------");
+		for (int i = 0x31/ *1* /;i <= 0x5A/ *Z* /; ++i )
+		{
+		for (int j = 0x31; j <= 0x5A; ++j)
+		{
+		DWORD dwNameFlag = 0x49300000; // I0??
+		dwNameFlag |= i << 8; //
+		dwNameFlag |= j;
+
+		CHAR szText[32] = { 0 };
+		MyTools::CCharacter::strcpy_my(szText, reinterpret_cast<CONST CHAR*>(&dwNameFlag), 4);
+		LOG_C_D(L"dwNameFlag=[%X,%s]", dwNameFlag, MyTools::CCharacter::UTF8ToUnicode(szText).c_str());
+		DWORD dwNamePtr = GetNamePtr(dwNameFlag, dwCALLAddr);
+		if (dwNamePtr != 0)
+		{
+		LOG_C_D(L"Name=%s", MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(dwNamePtr))).c_str());
+		}
+
+		DWORD dwItemDetailPtr = GetItemDetail(dwNameFlag, dwItemDetailCALLAddr);
+		if (dwItemDetailPtr != NULL)
+		{
+		LOG_C_D(L"ItemDetail=%s", MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(dwItemDetailPtr))).c_str());
+		}
+		}
+		}*/
+	});
+}
+
+DWORD GetItemObject_By_Index(_In_ DWORD dwItemIndex, _In_ DWORD dwCALL)
+{
+	__try
+	{
+		DWORD dwRetCode = 0;
+
+		__asm
+		{
+			PUSHAD;
+			PUSH dwItemIndex;
+			MOV ECX, dwHeroObjectAddr;
+			MOV EAX, dwCALL;
+			CALL EAX;
+			MOV dwRetCode, EAX;
+			POPAD;
+		}
+
+		return dwRetCode;
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+		__asm PUSHAD;
+		LOG_C_E(L"GetItemObject_By_Index Exception, dwItemIndex=%X,dwCALL", dwItemIndex, dwCALL);
+		__asm POPAD;
+	}
+	return 0;
+}
+
+VOID CExpr::ChangeItem(_In_ CONST std::vector<std::wstring>& Vec)
+{
+	if (Vec.size() != 2)
+	{
+		LOG_C_E(L"ChangeItem(ItemIndex,ItemId)");
+		return;
+	}
+	DWORD dwItemIndex = std::stoi(Vec.at(0));
+	DWORD dwItemId = std::stoi(Vec.at(1), 0, 16);
+
+	LOG_C_D(L"dwItemIndex=%d, dwItemId=%X", dwItemIndex, dwItemId);
+
+	static DWORD dwCALL = MyTools::CLSearchBase::FindCALL("8B442414508BCBE8", 0x6F36A671 - 0x6F36A678, (DWORD)(::GetModuleHandleW(L"Game.dll")), 1, 0, L"Game.dll");
+	if (dwCALL == 0)
+	{
+		LOG_C_E(L"dwCALL = 0");
+		return;
+	}
+
+	DWORD dwItemObject = GetItemObject_By_Index(dwItemIndex, dwCALL);
+	if (dwItemObject == NULL)
+	{
+		LOG_C_E(L"dwItemObject = NULL");
+		return;
+	}
+
+	MyTools::CCharacter::WriteDWORD(dwItemObject + 0x30, dwItemId);
+}
+
+VOID CExpr::TestPtr(_In_ CONST std::vector<std::wstring>& Vec)
+{	
+	
+	
 }

@@ -26,6 +26,12 @@ private:
 
 	VOID CloseSkillCool(_In_ CONST std::vector<std::wstring>& Vec);
 
+	VOID HookPointFlash(_In_ CONST std::vector<std::wstring>& Vec);
+
+	VOID PrintItem(_In_ CONST std::vector<std::wstring>& Vec);
+
+	VOID ChangeItem(_In_ CONST std::vector<std::wstring>& Vec);
+
 	VOID TestPtr(_In_ CONST std::vector<std::wstring>&);
 };
 
