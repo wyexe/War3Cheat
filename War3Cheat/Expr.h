@@ -6,6 +6,8 @@
 
 class CExpr : public MyTools::CExprFunBase, public MyTools::CClassInstance<CExpr>
 {
+private:
+	using PeekMessageAPtr = BOOL(WINAPI*)(_Out_ LPMSG lpMsg, _In_opt_ HWND hWnd, _In_ UINT wMsgFilterMin, _In_ UINT wMsgFilterMax, _In_ UINT wRemoveMsg);
 public:
 	CExpr() = default;
 	virtual ~CExpr() = default;
@@ -27,6 +29,7 @@ private:
 	VOID ChangeItem(_In_ CONST std::vector<std::wstring>& Vec);
 
 	VOID TestPtr(_In_ CONST std::vector<std::wstring>&);
+private:
 };
 
 
