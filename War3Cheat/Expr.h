@@ -26,6 +26,8 @@ private:
 
 	VOID CloseSkillCool(_In_ CONST std::vector<std::wstring>& Vec);
 
+	VOID SetSelectedHeroSkillCool(_In_ CONST std::vector<std::wstring>&);
+
 	VOID HookPointFlash(_In_ CONST std::vector<std::wstring>& Vec);
 
 	VOID PrintItem(_In_ CONST std::vector<std::wstring>& Vec);

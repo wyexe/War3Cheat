@@ -9,24 +9,30 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "InjectorWar3", "InjectorWar
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6447D200-A019-4548-8B45-2E196142C9B0}.Debug|Any CPU.ActiveCfg = Debug|Win32
 		{6447D200-A019-4548-8B45-2E196142C9B0}.Debug|x64.ActiveCfg = Debug|x64
 		{6447D200-A019-4548-8B45-2E196142C9B0}.Debug|x64.Build.0 = Debug|x64
 		{6447D200-A019-4548-8B45-2E196142C9B0}.Debug|x86.ActiveCfg = Debug|Win32
 		{6447D200-A019-4548-8B45-2E196142C9B0}.Debug|x86.Build.0 = Debug|Win32
+		{6447D200-A019-4548-8B45-2E196142C9B0}.Release|Any CPU.ActiveCfg = Release|Win32
 		{6447D200-A019-4548-8B45-2E196142C9B0}.Release|x64.ActiveCfg = Release|x64
 		{6447D200-A019-4548-8B45-2E196142C9B0}.Release|x64.Build.0 = Release|x64
 		{6447D200-A019-4548-8B45-2E196142C9B0}.Release|x86.ActiveCfg = Release|Win32
 		{6447D200-A019-4548-8B45-2E196142C9B0}.Release|x86.Build.0 = Release|Win32
+		{D8A9D5BD-2862-4D4E-8A03-FAC146C40B13}.Debug|Any CPU.ActiveCfg = Debug|Win32
 		{D8A9D5BD-2862-4D4E-8A03-FAC146C40B13}.Debug|x64.ActiveCfg = Debug|x64
 		{D8A9D5BD-2862-4D4E-8A03-FAC146C40B13}.Debug|x64.Build.0 = Debug|x64
 		{D8A9D5BD-2862-4D4E-8A03-FAC146C40B13}.Debug|x86.ActiveCfg = Debug|Win32
 		{D8A9D5BD-2862-4D4E-8A03-FAC146C40B13}.Debug|x86.Build.0 = Debug|Win32
+		{D8A9D5BD-2862-4D4E-8A03-FAC146C40B13}.Release|Any CPU.ActiveCfg = Release|Win32
 		{D8A9D5BD-2862-4D4E-8A03-FAC146C40B13}.Release|x64.ActiveCfg = Release|x64
 		{D8A9D5BD-2862-4D4E-8A03-FAC146C40B13}.Release|x64.Build.0 = Release|x64
 		{D8A9D5BD-2862-4D4E-8A03-FAC146C40B13}.Release|x86.ActiveCfg = Release|Win32

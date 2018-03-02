@@ -1,11 +1,14 @@
 #include "stdafx.h"
 #include "Expr.h"
+#include <tlhelp32.h>
 #include <MyTools/Log.h>
 #include <MyTools/CLSearchBase.h>
 #include <MyTools/Character.h>
 #include <MyTools/CLHook.h>
 #include <MyTools/CLAsync.h>
 #include <MyTools/LdrHeader.h>
+#include <MyTools/CLThread.h>
+#include <MyTools/CLLock.h>
 #include <MyTools/CLEchoException.h>
 #include "FindGameObject.h"
 #define _SELF L"Expr.cpp"
@@ -39,6 +42,7 @@ std::vector<MyTools::ExpressionFunPtr>& CExpr::GetVec()
 		{ std::bind(&CExpr::PrintItem,this, std::placeholders::_1) , L"PrintItem" },
 		{ std::bind(&CExpr::ChangeItem,this, std::placeholders::_1) , L"ChangeItem" },
 		{ std::bind(&CExpr::Help,this, std::placeholders::_1) , L"Help" },
+		{ std::bind(&CExpr::SetSelectedHeroSkillCool,this, std::placeholders::_1) , L"SetSelectedHeroSkillCool" },
 	};
 
 
@@ -82,101 +86,64 @@ VOID CExpr::SetSelectedObjectInvincible(_In_ CONST std::vector<std::wstring>& Ve
 	MyTools::CCharacter::WriteBYTE(dwGameNodeBase + 0x20, 0xE);
 }
 
-VOID CheckSkill(_In_ DWORD dwSkillObject)
+VOID CExpr::SetSelectedHeroSkillCool(_In_ CONST std::vector<std::wstring>&)
 {
-	DWORD* pdwSkillObject = new DWORD;
-	*pdwSkillObject = dwSkillObject;
-	MyTools::CLAsync::GetInstance().ExcuteAsync([pdwSkillObject]
+	CFindGameObject FindGameObject;
+	DWORD dwSelectedObject = FindGameObject.GetGameObjectAddr(FindGameObject.FindSelectedObject());
+
+	MyTools::CLEchoException::GetInstance().InvokeAction(__FUNCTIONW__, [dwSelectedObject]
 	{
-		//*(DWORD*)(*pdwSkillObject + 0x20) = 0x10;
-		//*(DWORD*)(*pdwSkillObject + 0x4) = 0x6;
-		//LOG_C_D(L"Set Skill Cool");
-		DWORD dwAddr = ReadDWORD(*pdwSkillObject + 0x54);
-		if (dwAddr != 0)
+		DWORD dwCALL = MyTools::CLSearchBase::FindCALL("750433C0EB05E87B112000", 0x6F27752A - 0x6F277530, (DWORD)::GetModuleHandleW(L"Game.dll"), 1, 0, L"Game.dll");
+		if (dwCALL == 0)
 		{
-			DWORD dwCount = ReadDWORD(dwAddr + 0x50);
-			DWORD dwSkillArrayAddr = ReadDWORD(dwAddr + 0x54);
-
-			if (dwSkillArrayAddr != 0 && (MyTools::CCharacter::ReadFloat(dwSkillArrayAddr + 0x14) > 1.0f || ReadDWORD(dwSkillArrayAddr + 0x10) > 1))
-			{
-				for (DWORD i = 0; i < dwCount; ++i)
-				{
-					*(DWORD*)(dwSkillArrayAddr + i * 0x68 + 0x10) = 0x0;
-					*(float*)(dwSkillArrayAddr + i * 0x68 + 0x14) = 1.0f;
-				}
-
-				LOG_C_D(L"Set Skill Mp = 1,dwCount=%d", dwCount);
-			}
+			LOG_C_E(L"dwCALL = 0");
+			return;
 		}
 
-		delete pdwSkillObject;
+		DWORD dwNextSkillAddr = dwSelectedObject + 0x1DC;
+		LOG_C_D(L"dwCALL=%X,dwNextSkillAddr=%X", dwCALL, dwNextSkillAddr);
+		for (; ;)
+		{
+			DWORD dwSkillObject = 0;
+			__asm
+			{
+				MOV ECX, dwNextSkillAddr;
+				MOV EAX, dwCALL;
+				CALL EAX;
+				MOV dwSkillObject, EAX;
+			}
+
+			if (dwSkillObject == 0)
+			{
+				break;
+			}
+
+			LOG_C_D(L"dwSkillObject=%X", dwSkillObject);
+			DWORD dwAddr = ReadDWORD(dwSkillObject + 0x54);
+			if (dwAddr != 0)
+			{
+				DWORD dwCount = ReadDWORD(dwAddr + 0x50);
+				DWORD dwSkillArrayAddr = ReadDWORD(dwAddr + 0x54);
+				if (ReadDWORD(dwSkillArrayAddr + 0x14) != 0)
+				{
+					if (dwSkillArrayAddr != 0 && (MyTools::CCharacter::ReadFloat(dwSkillArrayAddr + 0x14) > 1.0f || ReadDWORD(dwSkillArrayAddr + 0x10) > 1))
+					{
+						for (DWORD i = 0; i < dwCount; ++i)
+						{
+							*(DWORD*)(dwSkillArrayAddr + i * 0x68 + 0x10) = 0x0;
+							*(float*)(dwSkillArrayAddr + i * 0x68 + 0x14) = 1.0f;
+						}
+
+						LOG_C_D(L"Set Skill Mp = 1,dwCount=%d", dwCount);
+					}
+				}
+			}
+
+			dwNextSkillAddr = dwSkillObject + 0x24;
+		}
+		
 	});
-	
-	//MyTools::CCharacter::WriteDWORD(dwSkillObject + 0x44, 0x1);
 }
-
-static DWORD dwHookSkillAddr = 0;
-static DWORD s_dwSkillObject = 0;
-static DWORD dwHookSkill_EDI = 0;
-__declspec(naked) VOID WINAPI HookSkill()
-{
-	__asm MOV dwHookSkill_EDI, EDI;
-	__asm MOV s_dwSkillObject, ESI;
-	__asm PUSHAD;
-
-	if (dwHookSkill_EDI == dwHeroObjectAddr)
-	{
-		CheckSkill(s_dwSkillObject);
-	}
-
-	__asm
-	{
-		POPAD;
-		POP EBP;
-		ADD ESP, 0xC;
-		RETN;
-	}
-}
-
-VOID CExpr::CloseSkillCool(_In_ CONST std::vector<std::wstring>& Vec)
-{
-	/*
-		6F05C9AD | .  85C0          test    eax, eax;                   ; 85C075??D9442408D905
-		6F05C9AF | .  75 24         jnz     short 6F05C9D5
-		6F05C9B1 | .D94424 08     fld     dword ptr[esp + 8]
-		6F05C9B5 | .D905 70E4AA6F fld     dword ptr[6FAAE470]
-		6F05C9BB | .DED9          fcompp
-		6F05C9BD | .DFE0          fstsw   ax
-		6F05C9BF | .F6C4 05       test    ah, 5
-		6F05C9C2 | .  7A 11         jpe     short 6F05C9D5
-		6F05C9C4 | .  8B16          mov     edx, dword ptr[esi]
-		6F05C9C6 | .  8B92 A4030000 mov     edx, dword ptr[edx + 3A4]
-		6F05C9CC | .  8D4424 08     lea     eax, dword ptr[esp + 8]
-		6F05C9D0 | .  50            push    eax
-		6F05C9D1 | .  8BCE          mov     ecx, esi
-		6F05C9D3 | .FFD2          call    edx
-		6F05C9D5 | > 5E            pop     esi
-		6F05C9D6 | .  5D            pop     ebp;						;Hook
-		6F05C9D7 | .  83C4 0C       add     esp, 0C
-		6F05C9DA  \.C3            retn
-	*/
-
-	static MyTools::MYHOOK_CONTENT HookSkillContent;
-	HookSkillContent.uNopCount = 0x0;
-	HookSkillContent.dwFunAddr = reinterpret_cast<DWORD>(HookSkill);
-	dwHookSkillAddr = HookSkillContent.dwHookAddr = MyTools::CLSearchBase::FindAddr("85C075??D9442408D905", 0x6F05C9AD - 0x6F05C9D6, 0, L"Game.dll");
-	if (HookSkillContent.dwHookAddr == 0)
-	{
-		LOG_C_E(L"UnExist HookAddr");
-		return;
-	}
-
-
-	MyTools::CLHook::Hook_Fun_Jmp_MyAddr(&HookSkillContent);
-	LOG_C_D(L"Hook Succ...");
-}
-
-
 
 BOOL g_PushF2 = FALSE;
 BOOL PlayerFlash(_In_ DWORD dwHookPointHeroObjectAddr, _In_ float X, _In_ float Y, _In_ float Z)
@@ -255,6 +222,16 @@ __declspec(naked) void HookPoint()
 	}
 }
 
+struct ThreadMethodInfo
+{
+	std::function<VOID(VOID)> ThreadExcutePtr;
+	HANDLE                    hEvent;
+};
+
+MyTools::CLLock _LockQueMethodPtr(L"_LockQueMethodPtr");
+std::queue<ThreadMethodInfo> _QueMethodPtr;
+
+
 using PeekMessageAPtr = BOOL(WINAPI*)(_Out_ LPMSG lpMsg, _In_opt_ HWND hWnd, _In_ UINT wMsgFilterMin, _In_ UINT wMsgFilterMax, _In_ UINT wRemoveMsg);
 PeekMessageAPtr _OldPeekMessagePtr = nullptr;
 BOOL WINAPI PeekMessage_(_Out_ LPMSG lpMsg, _In_opt_ HWND hWnd, _In_ UINT wMsgFilterMin, _In_ UINT wMsgFilterMax, _In_ UINT wRemoveMsg)
@@ -264,8 +241,43 @@ BOOL WINAPI PeekMessage_(_Out_ LPMSG lpMsg, _In_opt_ HWND hWnd, _In_ UINT wMsgFi
 	{
 		g_PushF2 = lpMsg->message == WM_KEYDOWN ? TRUE : FALSE;
 	}
+
+
+	_LockQueMethodPtr.Access([]
+	{
+		if (!_QueMethodPtr.empty())
+		{
+
+			auto& itm = _QueMethodPtr.front();
+			itm.ThreadExcutePtr();
+			::SetEvent(itm.hEvent);
+			_QueMethodPtr.pop();
+		}
+	});
 	return bRetCode;
 }
+
+
+
+VOID PushPtrToMainThread(_In_ std::function<VOID(VOID)> MethodPtr)
+{
+	ThreadMethodInfo ThreadMethodInfo_;
+	ThreadMethodInfo_.hEvent = ::CreateEventW(NULL, FALSE, FALSE, NULL);
+	if (ThreadMethodInfo_.hEvent == NULL)
+	{
+		LOG_MSG_CF(L"hEvent = NULL, Err=%d", ::GetLastError());
+		return;
+	}
+
+	ThreadMethodInfo_.ThreadExcutePtr = MethodPtr;
+	_LockQueMethodPtr.Access([ThreadMethodInfo_] {_QueMethodPtr.push(ThreadMethodInfo_); });
+
+	::WaitForSingleObject(ThreadMethodInfo_.hEvent, INFINITE);
+	::CloseHandle(ThreadMethodInfo_.hEvent);
+	ThreadMethodInfo_.hEvent = INVALID_HANDLE_VALUE;
+}
+
+
 VOID CExpr::HookPointFlash(_In_ CONST std::vector<std::wstring>&)
 {
 	static MyTools::MYHOOK_CONTENT HookContent;
@@ -341,177 +353,356 @@ VOID CExpr::HookPointFlash(_In_ CONST std::vector<std::wstring>&)
 6F31A3B1  \.  C2 0800       retn    8
 */
 
-DWORD GetNamePtr(_In_ DWORD dwNameFlag, _In_ DWORD dwCALLAddr)
+DWORD GetNamePtr(_In_ DWORD dwNameFlag)
 {
-	__try
-	{
-		DWORD dwRetCode = 0;
-		
-		__asm
-		{
-			PUSHAD;
-
-			XOR EDX, EDX;
-			MOV ECX, dwNameFlag;
-			MOV EAX, dwCALLAddr;
-			CALL EAX;
-			MOV dwRetCode, EAX;
-			POPAD;
-		}
-
-		return dwRetCode;
-	}
-	__except (EXCEPTION_EXECUTE_HANDLER)
-	{
-		__asm PUSHAD;
-		LOG_C_E(L"GetNamePtr Exception, dwNameFlag=%X", dwNameFlag);
-		__asm POPAD;
-	}
-	return 0;
-}
-
-DWORD GetItemDetail(_In_ DWORD dwNameFlag, _In_ DWORD dwCALLAddr)
-{
-	__try
-	{
-		DWORD dwRetCode = 0;
-
-		__asm
-		{
-			PUSHAD;
-
-			PUSH 1;
-			XOR EDX, EDX;
-			MOV ECX, dwNameFlag;
-			MOV EAX, dwCALLAddr;
-			CALL EAX;
-			MOV dwRetCode, EAX;
-			POPAD;
-		}
-
-		return dwRetCode;
-	}
-	__except (EXCEPTION_EXECUTE_HANDLER)
-	{
-		__asm PUSHAD;
-		LOG_C_E(L"GetItemDetail Exception, dwNameFlag=%X", dwNameFlag);
-		__asm POPAD;
-	}
-	return 0;
-}
-
-VOID CExpr::PrintItem(_In_ CONST std::vector<std::wstring>& Vec)
-{
-	DWORD dwCALLAddr = MyTools::CLSearchBase::FindCALL("E8????????33D28BCBE8????????837C242000", 0x6F36A826 - 0x6F36A82F, (DWORD)(::GetModuleHandleW(L"Game.dll")), 1, 0, L"Game.dll");
+	static DWORD dwCALLAddr = MyTools::CLSearchBase::FindCALL("E8????????33D28BCBE8????????837C242000", 0x6F36A826 - 0x6F36A82F, (DWORD)(::GetModuleHandleW(L"Game.dll")), 1, 0, L"Game.dll");
 	if (dwCALLAddr == 0)
 	{
 		LOG_C_E(L"dwCALLAddr = 0 ");
-		return;
+		return 0;
 	}
 
-	DWORD dwItemDetailCALLAddr = MyTools::CLSearchBase::FindCALL("6A0133D2E8????????8BD8EB", 0x6F36A841 - 0x6F36A845, (DWORD)(::GetModuleHandleW(L"Game.dll")), 1, 0, L"Game.dll");
-	if (dwItemDetailCALLAddr == 0)
+	DWORD dwRetCode = 0;
+	__asm
 	{
-		LOG_C_E(L"dwItemDetailCALLAddr = 0 ");
+		PUSHAD;
+		XOR EDX, EDX;
+		MOV ECX, dwNameFlag;
+		MOV EAX, dwCALLAddr;
+		CALL EAX;
+		MOV dwRetCode, EAX;
+		POPAD;
+	}
+
+	return dwRetCode;
+}
+
+DWORD GetNameVirtualTable(_In_ DWORD dwVaildItemFlag)
+{
+	static DWORD dwCALLAddr = MyTools::CLSearchBase::FindCALL("BA????????E8????????85C074??8B48??85", 0x6F32DBE3 - 0x6F32DBE8, (DWORD)(::GetModuleHandleW(L"Game.dll")), 1, 0, L"Game.dll");
+	if (dwCALLAddr == 0)
+	{
+		LOG_C_E(L"dwCALLAddr = 0 ");
+		return 0;
+	}
+
+	static DWORD dwResNamePtr = MyTools::CLSearchBase::FindBase("BA????????E8????????85C074??8B48??85", 0x6F32DBE3 - 0x6F32DBE3, 1, 0, L"Game.dll", 0xFFFFFFFF);
+	if (dwResNamePtr == 0)
+	{
+		LOG_C_E(L"dwResNamePtr = 0 ");
+		return 0;
+	}
+
+	DWORD dwValue = 0;
+	__asm
+	{
+		PUSHAD;
+		MOV EDX, dwResNamePtr;
+		MOV EAX, dwCALLAddr;
+		CALL EAX;
+		MOV dwValue, EAX;
+		POPAD;
+	}
+
+	return dwValue != 0 ? ReadDWORD(dwValue) : 0;
+}
+
+VOID SetNamePtr(_In_ DWORD dwNameFlag, _In_ DWORD* dwBuffer)
+{
+	DWORD dwValue = 0;
+	__asm
+	{
+		PUSHAD;
+		PUSH dwNameFlag;
+		MOV ECX, dwBuffer;
+		MOV EAX, DWORD PTR DS : [ECX];
+		MOV EAX, DWORD PTR DS : [EAX];
+		CALL EAX;
+		POPAD;
+	}
+}
+
+DWORD GetItemFlag2(_In_ DWORD dwNameFlag)
+{
+	static DWORD dwGetItemFlag2CALL = MyTools::CLSearchBase::FindCALL("B9????????E8????????85C07526", 0x6F32C89A - 0x6F32C88D, (DWORD)(::GetModuleHandleW(L"Game.dll")), 1, 0, L"Game.dll");
+	if (dwGetItemFlag2CALL == 0)
+	{
+		LOG_C_E(L"dwGetItemFlag2CALL = 0 ");
+		return 0;
+	}
+
+	DWORD dwBuffer = dwNameFlag;
+	DWORD dwValue = 0;
+	__asm
+	{
+		PUSHAD;
+		LEA ECX, dwBuffer;
+		MOV EAX, dwGetItemFlag2CALL;
+		CALL EAX;
+		MOV dwValue, EAX;
+		POPAD;
+	}
+
+	return dwValue;
+}
+
+
+VOID CExpr::PrintItem(_In_ CONST std::vector<std::wstring>& Vec)
+{
+	if (_OldPeekMessagePtr == nullptr)
+	{
+		MyTools::CLdrHeader LdrHeader;
+		LdrHeader.InlineHook(::GetProcAddress(::GetModuleHandleW(L"user32.dll"), "PeekMessageA"), PeekMessage_, reinterpret_cast<void **>(&_OldPeekMessagePtr));
+	}
+
+	if (Vec.size() != 1)
+	{
+		LOG_C_E(L"PrintItem(all|item)");
 		return;
 	}
 
-	DWORD dwResNamePtr = MyTools::CLSearchBase::FindBase("B9????????E8????????85C07526", 0x6F32D3DA - 0x6F32D3DA, 1, 0, L"Game.dll", 0xFFFFFFFF);
-	LOG_C_D(L"dwResNamePtr = %X", dwResNamePtr);
+	
+
+	static DWORD dwResNamePtr = MyTools::CLSearchBase::FindBase("B9????????E8????????85C07526", 0x6F32D3DA - 0x6F32D3DA, 1, 0, L"Game.dll", 0xFFFFFFFF);
 	if (dwResNamePtr == 0)
 		return;
 
-	MyTools::CLEchoException::GetInstance().InvokeAction(__FUNCTIONW__, [=]
+	PushPtrToMainThread([=] 
 	{
-		DWORD dwNameFlagAddr = ReadDWORD(dwResNamePtr + 0x1C);
-		DWORD dwCount = ReadDWORD(dwResNamePtr + 0x24);
-		LOG_C_D(L"dwCount=%d", dwCount);
-		for (DWORD i = 2; i < dwCount; ++i)
+		MyTools::CLEchoException::GetInstance().InvokeAction(__FUNCTIONW__, [=]
 		{
-			DWORD dwNameFlagObjAddr = ReadDWORD(dwNameFlagAddr + 0xC * i + 0x8);
-			if (dwNameFlagObjAddr == 0)
-				continue;
+			DWORD dwBuffer[0x300] = { 0 };
+			DWORD dwNameVirtualTable = 0;
 
-			DWORD dwNameFlag = ReadDWORD(dwNameFlagObjAddr + 0x18);
-			DWORD dwFlag2 = ReadDWORD(dwNameFlagObjAddr + 0x4);
-			if (dwNameFlag == 0 || dwFlag2 == 0)
-				continue;
-
-			if ((dwNameFlag >> 0x18) != 'I')
-				continue;
-
-			CHAR szText[32] = { 0 };
-			//dwNameFlag = (dwNameFlag & 0xFF) << 0x18 | ((dwNameFlag >> 0x8 & 0xFF) << 0x10) | ((dwNameFlag >> 0x10 & 0xFF) << 0x8) | (dwNameFlag >> 0x18 & 0xFF);
-			MyTools::CCharacter::strcpy_my(szText, reinterpret_cast<CONST CHAR*>(&dwNameFlag), 4);
-			LOG_C_D(L"dwNameFlag=[%X,%s], dwFlag2=%X", dwNameFlag, MyTools::CCharacter::UTF8ToUnicode(szText).c_str(), dwFlag2);
-
-			DWORD dwNamePtr = GetNamePtr(dwNameFlag, dwCALLAddr);
-			if (dwNamePtr != 0)
+			DWORD dwNameFlagAddr = ReadDWORD(dwResNamePtr + 0x1C);
+			DWORD dwCount = ReadDWORD(dwResNamePtr + 0x24);
+			LOG_C_D(L"dwCount=%d", dwCount);
+			for (DWORD i = 2; i < dwCount; ++i)
 			{
-				LOG_C_D(L"Name=%s", MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(dwNamePtr))).c_str());
+				DWORD dwNameFlagObjAddr = ReadDWORD(dwNameFlagAddr + 0xC * i + 0x8);
+				if (dwNameFlagObjAddr == 0)
+					continue;
+
+				DWORD dwNameFlag = ReadDWORD(dwNameFlagObjAddr + 0x18);
+				DWORD dwFlag2 = ReadDWORD(dwNameFlagObjAddr + 0x4);
+				if (dwNameFlag == 0 || dwFlag2 == 0)
+					continue;
+
+				DWORD dwNamePtr = GetNamePtr(dwNameFlag);
+				if (dwNamePtr != 0)
+				{
+					dwNameVirtualTable = GetNameVirtualTable(dwNameFlag);
+					if (dwNameVirtualTable == 0)
+					{
+						CHAR szText[32] = { 0 };
+						MyTools::CCharacter::strcpy_my(szText, reinterpret_cast<CONST CHAR*>(&dwNameFlag), 4);
+						LOG_C_E(L"dwNameVirtualTable = 0, NameFlag=[%X,%X]", dwNameFlag, MyTools::CCharacter::UTF8ToUnicode(szText).c_str(), dwFlag2);
+						continue;
+					}
+
+					LOG_C_D(L"dwNameVirtualTable = %X", dwNameVirtualTable);
+					break;
+
+					//LOG_C_D(L"Name=%s", MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(dwNamePtr))).c_str());
+				}
+
+				/*DWORD dwItemDetailPtr = GetItemDetail(dwNameFlag, dwItemDetailCALLAddr);
+				if (dwItemDetailPtr != NULL)
+				{
+					LOG_C_D(L"ItemDetail=%s", MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(dwItemDetailPtr))).c_str());
+				}
+
+				break;*/
 			}
 
-			DWORD dwItemDetailPtr = GetItemDetail(dwNameFlag, dwItemDetailCALLAddr);
-			if (dwItemDetailPtr != NULL)
+
+			// 取不了, 因为刷新线程里面有一个TLS的线程局部变量.... 保存了一个不知道什么鬼, 而且还是拿来刷新游戏UI的,导致没办法用...
+			LOG_C_D(L"-------------------------------------------------");
+
+			std::vector<int> Vec;
+			for (int i = '0'; i <= '9';++i)
 			{
-				LOG_C_D(L"ItemDetail=%s", MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(dwItemDetailPtr))).c_str());
+				Vec.push_back(i);
 			}
-		}
+			for (int i = 'A'; i <= 'Z'; ++i)
+			{
+				Vec.push_back(i);
+			}
 
-		/*LOG_C_D(L"-------------------------------------------------");
-		for (int i = 0x31/ *1* /;i <= 0x5A/ *Z* /; ++i )
-		{
-		for (int j = 0x31; j <= 0x5A; ++j)
-		{
-		DWORD dwNameFlag = 0x49300000; // I0??
-		dwNameFlag |= i << 8; //
-		dwNameFlag |= j;
+			for (int a : Vec)
+			{
+				for (int b : Vec)
+				{
+					for (int c : Vec)
+					{
+						for (int d : Vec)
+						{
+							DWORD dwNameFlag = 0;
+							dwNameFlag |= a << 0x18;
+							dwNameFlag |= b << 0x10;
+							dwNameFlag |= c << 0x8;
+							dwNameFlag |= d;
 
-		CHAR szText[32] = { 0 };
-		MyTools::CCharacter::strcpy_my(szText, reinterpret_cast<CONST CHAR*>(&dwNameFlag), 4);
-		LOG_C_D(L"dwNameFlag=[%X,%s]", dwNameFlag, MyTools::CCharacter::UTF8ToUnicode(szText).c_str());
-		DWORD dwNamePtr = GetNamePtr(dwNameFlag, dwCALLAddr);
-		if (dwNamePtr != 0)
-		{
-		LOG_C_D(L"Name=%s", MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(dwNamePtr))).c_str());
-		}
 
-		DWORD dwItemDetailPtr = GetItemDetail(dwNameFlag, dwItemDetailCALLAddr);
-		if (dwItemDetailPtr != NULL)
-		{
-		LOG_C_D(L"ItemDetail=%s", MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(dwItemDetailPtr))).c_str());
-		}
-		}
-		}*/
+							ZeroMemory(dwBuffer, sizeof(dwBuffer));
+							dwBuffer[0] = dwNameVirtualTable;
+
+							dwBuffer[1] = GetItemFlag2(dwNameFlag);
+							if (dwBuffer[1] == 0)
+								continue;
+
+							dwBuffer[6] = dwNameFlag;
+							SetNamePtr(dwNameFlag, dwBuffer);
+
+							if (dwBuffer[10] != 0 && dwBuffer[10] >= 1 && dwBuffer[12] != 0 && dwBuffer[15] == 0 && dwBuffer[38] == 0 && dwBuffer[142] == 0)
+							{
+								CONST CHAR* pszItemName = reinterpret_cast<CONST CHAR*>(ReadDWORD(dwBuffer[11] + (dwBuffer[10] - 1) * 4));
+								CONST CHAR* pszItemDetail = reinterpret_cast<CONST CHAR*>(ReadDWORD(dwBuffer[0x9B] + (dwBuffer[0x9A] - 1) * 4));
+								if (pszItemName == nullptr || pszItemDetail == nullptr)
+									continue;
+
+
+								CHAR szText[32] = { 0 };
+								DWORD dwItemId = d << 0x18 | c << 0x10 | b << 0x8 | a;
+								MyTools::CCharacter::strcpy_my(szText, reinterpret_cast<CONST CHAR*>(&dwItemId), 4);
+
+
+								LOG_C_D(L"ID=%s, Name=%s", MyTools::CCharacter::UTF8ToUnicode(szText).c_str(), MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(pszItemName))).c_str());
+								LOG_C_D(L"ItemDetail=%s", MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(pszItemDetail))).c_str());
+							}
+
+						}
+					}
+				}
+			}
+			LOG_C_D(L"Over ..........................");
+			
+
+
+
+			/*for (int FirstBit = 'A'; FirstBit <= 0x5A; ++FirstBit)
+			{
+				if (FirstBit >= 0x3A && FirstBit <= 0x40)
+					continue;
+
+				for (int SecondBit = 0x30; SecondBit <= 0x5A; ++SecondBit)
+				{
+					if (SecondBit >= 0x3A && SecondBit <= 0x40)
+						continue;
+
+					for (int ThirdBit = 0x30; ThirdBit <= 0x5A; ++ThirdBit)
+					{
+						if (ThirdBit >= 0x3A && ThirdBit <= 0x40)
+							continue;
+
+						for (int FourBit = 0x30; FourBit <= 0x5A; ++FourBit)
+						{
+							if (FourBit >= 0x3A && FourBit <= 0x40)
+								continue;
+
+							DWORD dwNameFlag = 0;
+							dwNameFlag |= FirstBit << 0x18;
+							dwNameFlag |= SecondBit << 0x10;
+							dwNameFlag |= ThirdBit << 0x8;
+							dwNameFlag |= FourBit;
+
+							DWORD dwNamePtr = GetNamePtr(dwNameFlag, dwCALLAddr);
+							if (dwNamePtr == 0)
+								continue;
+
+							CONST CHAR* pszItemName = reinterpret_cast<CONST CHAR*>(dwNamePtr);
+							if (*pszItemName == 'D' && MyTools::CCharacter::strcmp_my(pszItemName, "Default string"))
+							{
+								continue;
+							}
+
+							DWORD dwItemDetailPtr = GetItemDetail(dwNameFlag, dwItemDetailCALLAddr);
+							if (dwItemDetailPtr == NULL)
+								continue;
+
+							CONST CHAR* pszItemDetail = reinterpret_cast<CONST CHAR*>(dwItemDetailPtr);
+							if(*pszItemDetail == 'T' && MyTools::CCharacter::strcmp_my(pszItemName, "Tool tip missing!"))
+								continue;
+
+							
+							CHAR szText[32] = { 0 };
+							MyTools::CCharacter::strcpy_my(szText, reinterpret_cast<CONST CHAR*>(&dwNameFlag), 4);
+							LOG_C_D(L"dwNameFlag=[%X,%s],Name=%s", dwNameFlag, MyTools::CCharacter::UTF8ToUnicode(szText).c_str(), MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(dwNamePtr))).c_str());
+							LOG_C_D(L"ItemDetail=%s", MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(dwItemDetailPtr))).c_str());
+						}
+					}
+				}
+			}*/
+			
+
+			//            '1'          'Z'
+			/*for (int i = 0x30; i <= 0x5A; ++i)
+			{
+				for (int j = 0x30; j <= 0x5A; ++j)
+				{
+					if (i >= 0x3A && i <= 0x40)
+						continue;
+					if (j >= 0x3A && j <= 0x40)
+						continue;
+
+					DWORD dwNameFlag = 0x49300000; // I0??
+					dwNameFlag |= i << 8; //
+					dwNameFlag |= j;
+
+
+
+
+					DWORD dwNamePtr = GetNamePtr(dwNameFlag, dwCALLAddr);
+					if (dwNamePtr != 0)
+					{
+						CONST CHAR* pszItemName = reinterpret_cast<CONST CHAR*>(dwNamePtr);
+						if (*pszItemName == 'D' && MyTools::CCharacter::strcmp_my(pszItemName, "Default string"))
+						{
+							continue;
+						}
+
+						CHAR szText[32] = { 0 };
+						MyTools::CCharacter::strcpy_my(szText, reinterpret_cast<CONST CHAR*>(&dwNameFlag), 4);
+						LOG_C_D(L"dwNameFlag=[%X,%s],Name=%s", dwNameFlag, MyTools::CCharacter::UTF8ToUnicode(szText).c_str(), MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(dwNamePtr))).c_str());
+					}
+
+					DWORD dwItemDetailPtr = GetItemDetail(dwNameFlag, dwItemDetailCALLAddr);
+					if (dwItemDetailPtr != NULL)
+					{
+						LOG_C_D(L"ItemDetail=%s", MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(dwItemDetailPtr))).c_str());
+					}
+				}
+			}*/
+
+
+		});
 	});
+	LOG_C_D(L"Print Item ... Over");
 }
 
-DWORD GetItemObject_By_Index(_In_ DWORD dwItemIndex, _In_ DWORD dwCALL)
+DWORD GetItemObject_By_Index(_In_ DWORD dwObject, _In_ DWORD dwItemIndex)
 {
-	__try
+	static DWORD dwCALL = MyTools::CLSearchBase::FindCALL("8B442414508BCBE8", 0x6F36A671 - 0x6F36A678, (DWORD)(::GetModuleHandleW(L"Game.dll")), 1, 0, L"Game.dll");
+	if (dwCALL == 0)
 	{
-		DWORD dwRetCode = 0;
-
-		__asm
-		{
-			PUSHAD;
-			PUSH dwItemIndex;
-			MOV ECX, dwHeroObjectAddr;
-			MOV EAX, dwCALL;
-			CALL EAX;
-			MOV dwRetCode, EAX;
-			POPAD;
-		}
-
-		return dwRetCode;
+		LOG_C_E(L"dwCALL = 0");
+		return 0;
 	}
-	__except (EXCEPTION_EXECUTE_HANDLER)
+
+	DWORD dwRetCode = 0;
+
+	__asm
 	{
-		__asm PUSHAD;
-		LOG_C_E(L"GetItemObject_By_Index Exception, dwItemIndex=%X,dwCALL", dwItemIndex, dwCALL);
-		__asm POPAD;
+		PUSHAD;
+		PUSH dwItemIndex;
+		MOV ECX, dwObject;
+		MOV EAX, dwCALL;
+		CALL EAX;
+		MOV dwRetCode, EAX;
+		POPAD;
 	}
-	return 0;
+
+	return dwRetCode;
 }
 
 VOID CExpr::ChangeItem(_In_ CONST std::vector<std::wstring>& Vec)
@@ -521,19 +712,38 @@ VOID CExpr::ChangeItem(_In_ CONST std::vector<std::wstring>& Vec)
 		LOG_C_E(L"ChangeItem(ItemIndex,ItemId)");
 		return;
 	}
-	DWORD dwItemIndex = std::stoi(Vec.at(0));
-	DWORD dwItemId = std::stoi(Vec.at(1), 0, 16);
 
-	LOG_C_D(L"dwItemIndex=%d, dwItemId=%X", dwItemIndex, dwItemId);
-
-	static DWORD dwCALL = MyTools::CLSearchBase::FindCALL("8B442414508BCBE8", 0x6F36A671 - 0x6F36A678, (DWORD)(::GetModuleHandleW(L"Game.dll")), 1, 0, L"Game.dll");
-	if (dwCALL == 0)
+	if (_OldPeekMessagePtr == nullptr)
 	{
-		LOG_C_E(L"dwCALL = 0");
-		return;
+		MyTools::CLdrHeader LdrHeader;
+		LdrHeader.InlineHook(::GetProcAddress(::GetModuleHandleW(L"user32.dll"), "PeekMessageA"), PeekMessage_, reinterpret_cast<void **>(&_OldPeekMessagePtr));
 	}
 
-	DWORD dwItemObject = GetItemObject_By_Index(dwItemIndex, dwCALL);
+	DWORD dwItemIndex = std::stoi(Vec.at(0));
+
+	std::string szItemId = MyTools::CCharacter::UnicodeToASCII(Vec.at(1));
+	
+
+	DWORD dwItemId = 0;
+	dwItemId |= szItemId.at(0) << 0x18;
+	dwItemId |= szItemId.at(1) << 0x10;
+	dwItemId |= szItemId.at(2) << 0x08;
+	dwItemId |= szItemId.at(3);
+
+	LOG_C_D(L"dwItemIndex=%d, dwItemId=%X", dwItemIndex, dwItemId);
+	CONST CHAR* pszItemName = nullptr;
+	PushPtrToMainThread([&]
+	{
+		pszItemName = reinterpret_cast<CONST CHAR *>(GetNamePtr(dwItemId));
+	});
+	if (pszItemName != nullptr)
+	{
+		LOG_C_D(L"Name=%s", MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(pszItemName))).c_str());
+	}
+
+
+	CFindGameObject FindGameObject;
+	DWORD dwItemObject = GetItemObject_By_Index(FindGameObject.GetGameObjectAddr(FindGameObject.FindSelectedObject()), dwItemIndex);
 	if (dwItemObject == NULL)
 	{
 		LOG_C_E(L"dwItemObject = NULL");
