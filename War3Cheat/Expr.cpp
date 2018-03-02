@@ -33,11 +33,8 @@ std::vector<MyTools::ExpressionFunPtr>& CExpr::GetVec()
 {
 	static std::vector<MyTools::ExpressionFunPtr> Vec = 
 	{
-		{ std::bind(&CExpr::PrintSelectedObject,this, std::placeholders::_1) , L"PrintSelectedObject" },
-		{ std::bind(&CExpr::SetSelectedIsHero,this, std::placeholders::_1) , L"SetSelectedIsHero" },
 		{ std::bind(&CExpr::SetSelectedObjectPowerType,this, std::placeholders::_1) , L"SetSelectedObjectPowerType" },
 		{ std::bind(&CExpr::SetSelectedObjectInvincible,this, std::placeholders::_1) , L"SetSelectedObjectInvincible" },
-		{ std::bind(&CExpr::CloseSkillCool,this, std::placeholders::_1) , L"CloseSkillCool" },
 		{ std::bind(&CExpr::TestPtr,this, std::placeholders::_1) , L"TestPtr" },
 		{ std::bind(&CExpr::PrintItem,this, std::placeholders::_1) , L"PrintItem" },
 		{ std::bind(&CExpr::ChangeItem,this, std::placeholders::_1) , L"ChangeItem" },
@@ -47,23 +44,6 @@ std::vector<MyTools::ExpressionFunPtr>& CExpr::GetVec()
 
 
 	return Vec;
-}
-
-static DWORD dwHeroObjectAddr;
-
-VOID CExpr::SetSelectedIsHero(_In_ CONST std::vector<std::wstring>&)
-{
-	CFindGameObject FindGameObject;
-	DWORD dwGameNodeBase = FindGameObject.FindSelectedObject();
-	dwHeroObjectAddr = FindGameObject.GetGameObjectAddr(dwGameNodeBase);
-	LOG_C_D(L"Set Hero[%s].dwNodeBase=%X, ObjAddr=%X", FindGameObject.GetSelectedObjectName().c_str(), dwGameNodeBase, dwHeroObjectAddr);
-}
-
-VOID CExpr::PrintSelectedObject(_In_ CONST std::vector<std::wstring>& Vec)
-{
-	CFindGameObject FindGameObject;
-	DWORD dwGameNodeBase = FindGameObject.FindSelectedObject();
-	LOG_C_D(L"Selected[%s].dwNodeBase=%X, ObjAddr=%X", FindGameObject.GetSelectedObjectName().c_str(), dwGameNodeBase, FindGameObject.GetGameObjectAddr(dwGameNodeBase));
 }
 
 VOID CExpr::SetSelectedObjectPowerType(_In_ CONST std::vector<std::wstring>& Vec)
@@ -145,82 +125,6 @@ VOID CExpr::SetSelectedHeroSkillCool(_In_ CONST std::vector<std::wstring>&)
 	});
 }
 
-BOOL g_PushF2 = FALSE;
-BOOL PlayerFlash(_In_ DWORD dwHookPointHeroObjectAddr, _In_ float X, _In_ float Y, _In_ float Z)
-{
-	if (dwHookPointHeroObjectAddr != dwHeroObjectAddr || !g_PushF2 || (DWORD)X == 0 || (DWORD)Y == 0)
-	{
-		return FALSE;
-	}
-
-	static DWORD dwCALL = MyTools::CLSearchBase::FindCALL("FFD08BC8E83A7F1C00", 0x477C30D - 0x477C311, (DWORD)::GetModuleHandleW(L"Game.dll"), 1, 0, L"Game.dll");
-	LOG_C_D(L"Flash [%.2f,%.2f,%.2f]", X, Y, Z);
-	struct FlashBufferContent
-	{
-		float fX;
-		float fY;
-		float fZ;
-	};
-
-	static CHAR Buffer[1024];
-	memset(Buffer, 0, sizeof(Buffer));
-
-	((FlashBufferContent*)Buffer)->fX = static_cast<float>(X);
-	((FlashBufferContent*)Buffer)->fY = static_cast<float>(Y);
-	((FlashBufferContent*)Buffer)->fZ = static_cast<float>(Z);
-
-	__asm
-	{
-		PUSHAD;
-		PUSH 1;
-		LEA EAX, Buffer;
-		PUSH EAX;
-		MOV ECX, dwHeroObjectAddr;
-		ADd ECX, 0x164;
-		MOV EAX, dwCALL;
-		CALL EAX;
-		POPAD;
-	}
-	return TRUE;
-}
-
-static DWORD dwHookPointESI = 0;
-static DWORD dwHookPointAddr = 0;
-static DWORD dwHookPointX = 0;
-static DWORD dwHookPointY = 0;
-static DWORD dwHookPointZ = 0;
-__declspec(naked) void HookPoint()
-{
-	
-	__asm
-	{
-		MOV dwHookPointESI, ESI;
-		LEA EAX, DWORD PTR DS : [ESP + 0x1C8];
-		MOV dwHookPointX, EAX;
-		LEA EAX, DWORD PTR DS : [ESP + 0x1CC];
-		MOV dwHookPointY, EAX;
-		LEA EAX, DWORD PTR DS : [ESP + 0x1D0];
-		MOV dwHookPointZ, EAX;
-	}
-	__asm PUSHAD;
-
-	PlayerFlash(ReadDWORD(dwHookPointESI + 0x30),
-		MyTools::CCharacter::ReadFloat(dwHookPointX), 
-		MyTools::CCharacter::ReadFloat(dwHookPointY),
-		MyTools::CCharacter::ReadFloat(dwHookPointZ));
-
-	__asm
-	{
-		POPAD;
-		MOV EDI, dwHookPointAddr; 
-		ADD EDI, 0x5;
-		PUSH EDI;
-
-		MOV EDI, DWORD PTR DS : [ESI + 0x30];
-		TEST EDI, EDI;
-		RETN;
-	}
-}
 
 struct ThreadMethodInfo
 {
@@ -237,12 +141,6 @@ PeekMessageAPtr _OldPeekMessagePtr = nullptr;
 BOOL WINAPI PeekMessage_(_Out_ LPMSG lpMsg, _In_opt_ HWND hWnd, _In_ UINT wMsgFilterMin, _In_ UINT wMsgFilterMax, _In_ UINT wRemoveMsg)
 {
 	BOOL bRetCode = _OldPeekMessagePtr(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg);
-	if (lpMsg->wParam == VK_F2)
-	{
-		g_PushF2 = lpMsg->message == WM_KEYDOWN ? TRUE : FALSE;
-	}
-
-
 	_LockQueMethodPtr.Access([]
 	{
 		if (!_QueMethodPtr.empty())
@@ -275,28 +173,6 @@ VOID PushPtrToMainThread(_In_ std::function<VOID(VOID)> MethodPtr)
 	::WaitForSingleObject(ThreadMethodInfo_.hEvent, INFINITE);
 	::CloseHandle(ThreadMethodInfo_.hEvent);
 	ThreadMethodInfo_.hEvent = INVALID_HANDLE_VALUE;
-}
-
-
-VOID CExpr::HookPointFlash(_In_ CONST std::vector<std::wstring>&)
-{
-	static MyTools::MYHOOK_CONTENT HookContent;
-	HookContent.uNopCount = 0x0;
-	HookContent.dwFunAddr = reinterpret_cast<DWORD>(HookPoint);
-	dwHookPointAddr = HookContent.dwHookAddr = MyTools::CLSearchBase::FindAddr("7405E881D3FFFF", 0x46D5B88 - 0x46D5B8F, 0, L"Game.dll");
-	if (HookContent.dwHookAddr == 0)
-	{
-		LOG_C_E(L"UnExist HookAddr");
-		return;
-	}
-
-	MyTools::CLHook::Hook_Fun_Jmp_MyAddr(&HookContent);
-
-	MyTools::CLdrHeader LdrHeader;
-	LdrHeader.InlineHook(::GetProcAddress(::GetModuleHandleW(L"user32.dll"), "PeekMessageA"), PeekMessage_, reinterpret_cast<void **>(&_OldPeekMessagePtr));
-
-
-	LOG_C_D(L"Hook Point Done! dwHookPointAddr = %X", dwHookPointAddr);
 }
 
 

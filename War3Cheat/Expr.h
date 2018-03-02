@@ -16,19 +16,11 @@ public:
 
 	virtual std::vector<MyTools::ExpressionFunPtr>& GetVec() override;
 private:
-	VOID SetSelectedIsHero(_In_ CONST std::vector<std::wstring>&);
-
-	VOID PrintSelectedObject(_In_ CONST std::vector<std::wstring>&);
-
 	VOID SetSelectedObjectPowerType(_In_ CONST std::vector<std::wstring>& Vec);
 
 	VOID SetSelectedObjectInvincible(_In_ CONST std::vector<std::wstring>& Vec);
 
-	VOID CloseSkillCool(_In_ CONST std::vector<std::wstring>& Vec);
-
 	VOID SetSelectedHeroSkillCool(_In_ CONST std::vector<std::wstring>&);
-
-	VOID HookPointFlash(_In_ CONST std::vector<std::wstring>& Vec);
 
 	VOID PrintItem(_In_ CONST std::vector<std::wstring>& Vec);
 
