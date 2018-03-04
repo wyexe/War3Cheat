@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="MyTools">
-      <UniqueIdentifier>{29eccf4d-004d-4b4f-82d8-694b2a2e0ec9}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -24,32 +21,11 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\MyTools\MyTools\CLProcess.h">
-      <Filter>MyTools</Filter>
+    <ClInclude Include="ShareMemory\GameShareMemory.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\MyTools\MyTools\CLPublic.h">
-      <Filter>MyTools</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\MyTools\MyTools\ToolsPublic.h">
-      <Filter>MyTools</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\MyTools\MyTools\Character.h">
-      <Filter>MyTools</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\MyTools\MyTools\CLFile.h">
-      <Filter>MyTools</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\MyTools\MyTools\CLLock.h">
-      <Filter>MyTools</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\MyTools\MyTools\Log.h">
-      <Filter>MyTools</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\MyTools\MyTools\CLThread.h">
-      <Filter>MyTools</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\MyTools\MyTools\TimeTick.h">
-      <Filter>MyTools</Filter>
+    <ClInclude Include="ShareMemory\ShareMemoryStruct.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -59,29 +35,8 @@
     <ClCompile Include="InjectorWar3.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\MyTools\MyTools\CLProcess.cpp">
-      <Filter>MyTools</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\MyTools\MyTools\CPublic.cpp">
-      <Filter>MyTools</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\MyTools\MyTools\Character.cpp">
-      <Filter>MyTools</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\MyTools\MyTools\CLFile.cpp">
-      <Filter>MyTools</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\MyTools\MyTools\CLLock.cpp">
-      <Filter>MyTools</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\MyTools\MyTools\Log.cpp">
-      <Filter>MyTools</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\MyTools\MyTools\CLThread.cpp">
-      <Filter>MyTools</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\MyTools\MyTools\TimeTick.cpp">
-      <Filter>MyTools</Filter>
+    <ClCompile Include="ShareMemory\GameShareMemory.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
