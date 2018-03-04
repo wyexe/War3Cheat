@@ -151,14 +151,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="ShareMemory\GameShareMemory.h" />
+    <ClInclude Include="ShareMemory\ConsoleShareMemory.h" />
     <ClInclude Include="ShareMemory\ShareMemoryStruct.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="InjectorWar3.cpp" />
-    <ClCompile Include="ShareMemory\GameShareMemory.cpp" />
+    <ClCompile Include="ShareMemory\ConsoleShareMemory.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

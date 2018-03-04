@@ -1,6 +1,7 @@
 #ifndef __WAR3CHEAT_FEATURE_EXPR_EXPR_H__
 #define __WAR3CHEAT_FEATURE_EXPR_EXPR_H__
 
+/*
 #include <MyTools/CLExpression.h>
 #include <MyTools/ClassInstance.h>
 
@@ -30,7 +31,7 @@ private:
 
 	VOID TestPtr(_In_ CONST std::vector<std::wstring>&);
 private:
-};
+};*/
 
 
 

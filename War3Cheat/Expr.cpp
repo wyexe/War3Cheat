@@ -1,21 +1,12 @@
 #include "stdafx.h"
 #include "Expr.h"
 #include <tlhelp32.h>
-#include <MyTools/Log.h>
-#include <MyTools/CLSearchBase.h>
-#include <MyTools/Character.h>
-#include <MyTools/CLHook.h>
-#include <MyTools/CLAsync.h>
-#include <MyTools/LdrHeader.h>
-#include <MyTools/CLThread.h>
-#include <MyTools/CLLock.h>
-#include <MyTools/CLEchoException.h>
-#include "FindGameObject.h"
 #define _SELF L"Expr.cpp"
 
 
 #define ReadDWORD(x) MyTools::CCharacter::ReadDWORD(x)
 
+/*
 VOID CExpr::Release()
 {
 
@@ -177,7 +168,7 @@ VOID PushPtrToMainThread(_In_ std::function<VOID(VOID)> MethodPtr)
 
 
 
-/*
+/ *
 6F32D3D8  |.  50            push    eax
 6F32D3D9  |.  57            push    edi
 6F32D3DA  |.  B9 2CC7AC6F   mov     ecx, 6FACC72C							   ;  ResNamePtr
@@ -227,7 +218,7 @@ VOID PushPtrToMainThread(_In_ std::function<VOID(VOID)> MethodPtr)
 6F31A3AF  |.  5E            pop     esi
 6F31A3B0  |.  5B            pop     ebx
 6F31A3B1  \.  C2 0800       retn    8
-*/
+* /
 
 DWORD GetNamePtr(_In_ DWORD dwNameFlag)
 {
@@ -382,13 +373,13 @@ VOID CExpr::PrintItem(_In_ CONST std::vector<std::wstring>& Vec)
 					//LOG_C_D(L"Name=%s", MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(dwNamePtr))).c_str());
 				}
 
-				/*DWORD dwItemDetailPtr = GetItemDetail(dwNameFlag, dwItemDetailCALLAddr);
+				/ *DWORD dwItemDetailPtr = GetItemDetail(dwNameFlag, dwItemDetailCALLAddr);
 				if (dwItemDetailPtr != NULL)
 				{
 					LOG_C_D(L"ItemDetail=%s", MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(dwItemDetailPtr))).c_str());
 				}
 
-				break;*/
+				break;* /
 			}
 
 
@@ -456,7 +447,7 @@ VOID CExpr::PrintItem(_In_ CONST std::vector<std::wstring>& Vec)
 
 
 
-			/*for (int FirstBit = 'A'; FirstBit <= 0x5A; ++FirstBit)
+			/ *for (int FirstBit = 'A'; FirstBit <= 0x5A; ++FirstBit)
 			{
 				if (FirstBit >= 0x3A && FirstBit <= 0x40)
 					continue;
@@ -508,11 +499,11 @@ VOID CExpr::PrintItem(_In_ CONST std::vector<std::wstring>& Vec)
 						}
 					}
 				}
-			}*/
+			}* /
 			
 
 			//            '1'          'Z'
-			/*for (int i = 0x30; i <= 0x5A; ++i)
+			/ *for (int i = 0x30; i <= 0x5A; ++i)
 			{
 				for (int j = 0x30; j <= 0x5A; ++j)
 				{
@@ -548,7 +539,7 @@ VOID CExpr::PrintItem(_In_ CONST std::vector<std::wstring>& Vec)
 						LOG_C_D(L"ItemDetail=%s", MyTools::CCharacter::UTF8ToUnicode(std::string(reinterpret_cast<CONST CHAR*>(dwItemDetailPtr))).c_str());
 					}
 				}
-			}*/
+			}* /
 
 
 		});
@@ -633,4 +624,4 @@ VOID CExpr::TestPtr(_In_ CONST std::vector<std::wstring>& Vec)
 {	
 	
 	
-}
+}*/

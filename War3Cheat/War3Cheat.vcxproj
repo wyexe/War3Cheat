@@ -38,6 +38,7 @@
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>Static</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
@@ -79,7 +80,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\..\MyTools;..\War3Cheat;$(IncludePath)</IncludePath>
+    <IncludePath>$(IncludePath);$(SolutionDir)include;$(SolutionDir);</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;$(SolutionDir)lib;</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -113,13 +115,14 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;WAR3CHEAT_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -146,51 +149,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\MyTools\MyTools\Character.h" />
-    <ClInclude Include="..\..\MyTools\MyTools\ClassInstance.h" />
-    <ClInclude Include="..\..\MyTools\MyTools\CLAsync.h" />
-    <ClInclude Include="..\..\MyTools\MyTools\CLEchoException.h" />
-    <ClInclude Include="..\..\MyTools\MyTools\CLErrMsg.h" />
-    <ClInclude Include="..\..\MyTools\MyTools\CLExpression.h" />
-    <ClInclude Include="..\..\MyTools\MyTools\CLExpressionCalc.h" />
-    <ClInclude Include="..\..\MyTools\MyTools\CLFile.h" />
-    <ClInclude Include="..\..\MyTools\MyTools\CLHook.h" />
-    <ClInclude Include="..\..\MyTools\MyTools\CLLock.h" />
-    <ClInclude Include="..\..\MyTools\MyTools\CLProcess.h" />
-    <ClInclude Include="..\..\MyTools\MyTools\CLPublic.h" />
-    <ClInclude Include="..\..\MyTools\MyTools\CLSearchBase.h" />
-    <ClInclude Include="..\..\MyTools\MyTools\CmdLog.h" />
-    <ClInclude Include="..\..\MyTools\MyTools\LDasm.h" />
-    <ClInclude Include="..\..\MyTools\MyTools\LdrHeader.h" />
-    <ClInclude Include="..\..\MyTools\MyTools\Log.h" />
-    <ClInclude Include="..\..\MyTools\MyTools\TimeTick.h" />
-    <ClInclude Include="..\..\MyTools\MyTools\ToolsPublic.h" />
     <ClInclude Include="Expr.h" />
-    <ClInclude Include="FindGameObject.h" />
+    <ClInclude Include="Feature\CheatFeature.h" />
+    <ClInclude Include="Feature\FindGameObject.h" />
+    <ClInclude Include="ShareMemory\GameShareMemory.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\MyTools\MyTools\Character.cpp" />
-    <ClCompile Include="..\..\MyTools\MyTools\CLAsync.cpp" />
-    <ClCompile Include="..\..\MyTools\MyTools\CLErrMsg.cpp" />
-    <ClCompile Include="..\..\MyTools\MyTools\CLExpression.cpp" />
-    <ClCompile Include="..\..\MyTools\MyTools\CLExpressionCalc.cpp" />
-    <ClCompile Include="..\..\MyTools\MyTools\CLFile.cpp" />
-    <ClCompile Include="..\..\MyTools\MyTools\CLHook.cpp" />
-    <ClCompile Include="..\..\MyTools\MyTools\CLLock.cpp" />
-    <ClCompile Include="..\..\MyTools\MyTools\CLProcess.cpp" />
-    <ClCompile Include="..\..\MyTools\MyTools\CLSearchBase.cpp" />
-    <ClCompile Include="..\..\MyTools\MyTools\CLThread.cpp" />
-    <ClCompile Include="..\..\MyTools\MyTools\CmdLog.cpp" />
-    <ClCompile Include="..\..\MyTools\MyTools\CPublic.cpp" />
-    <ClCompile Include="..\..\MyTools\MyTools\LDasm.cpp" />
-    <ClCompile Include="..\..\MyTools\MyTools\LdrHeader.cpp" />
-    <ClCompile Include="..\..\MyTools\MyTools\Log.cpp" />
-    <ClCompile Include="..\..\MyTools\MyTools\TimeTick.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="Expr.cpp" />
-    <ClCompile Include="FindGameObject.cpp" />
+    <ClCompile Include="Feature\CheatFeature.cpp" />
+    <ClCompile Include="Feature\FindGameObject.cpp" />
+    <ClCompile Include="ShareMemory\GameShareMemory.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

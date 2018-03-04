@@ -1,5 +1,5 @@
-#ifndef __LIBTOOLS_LOG_LOGEXPRESSIONPELOADER_H__
-#define __LIBTOOLS_LOG_LOGEXPRESSIONPELOADER_H__
+#ifndef __LIBTOOLS_LOGLIB_LOGEXPRESSIONPELOADER_H__
+#define __LIBTOOLS_LOGLIB_LOGEXPRESSIONPELOADER_H__
 
 #include <Windows.h>
 #include <string>
@@ -74,8 +74,8 @@ namespace libTools
 	private:
 		BOOL   _bAlloc = FALSE;
 		LPVOID _pvFileContent = nullptr;
-		UINT   _uFileSize = NULL;
+		SIZE_T _uFileSize = NULL;
 	};
 }
 
-#endif // !__LIBTOOLS_LOG_LOGEXPRESSIONPELOADER_H__
+#endif // !__LIBTOOLS_LOGLIB_LOGEXPRESSIONPELOADER_H__

@@ -21,10 +21,10 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ShareMemory\GameShareMemory.h">
+    <ClInclude Include="ShareMemory\ShareMemoryStruct.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ShareMemory\ShareMemoryStruct.h">
+    <ClInclude Include="ShareMemory\ConsoleShareMemory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -35,7 +35,7 @@
     <ClCompile Include="InjectorWar3.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ShareMemory\GameShareMemory.cpp">
+    <ClCompile Include="ShareMemory\ConsoleShareMemory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

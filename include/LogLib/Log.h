@@ -1,5 +1,5 @@
-#ifndef __LIBTOOLS_LOG_LOG_H__
-#define __LIBTOOLS_LOG_LOG_H__
+#ifndef __LIBTOOLS_LOGLIB_LOG_H__
+#define __LIBTOOLS_LOGLIB_LOG_H__
 
 #include <Windows.h>
 #include <string>
@@ -144,4 +144,4 @@ namespace libTools
 	};
 }
 
-#endif // !__LIBTOOLS_LOG_LOG_H__
+#endif // !__LIBTOOLS_LOGLIB_LOG_H__

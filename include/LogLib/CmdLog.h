@@ -1,5 +1,5 @@
-#ifndef __LIBTOOLS_LOG_CMDLOG_H__
-#define __LIBTOOLS_LOG_CMDLOG_H__
+#ifndef __LIBTOOLS_LOGLIB_CMDLOG_H__
+#define __LIBTOOLS_LOGLIB_CMDLOG_H__
 
 #include <string>
 #include "LogExpression.h"
@@ -73,4 +73,4 @@ namespace libTools
 
 
 
-#endif // !__LIBTOOLS_LOG_CMDLOG_H__
+#endif // !__LIBTOOLS_LOGLIB_CMDLOG_H__

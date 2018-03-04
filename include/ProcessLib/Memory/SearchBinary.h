@@ -14,19 +14,18 @@ namespace libTools
 
 #ifdef _WIN64
 #else
-		DWORD	FindAddr(LPCSTR lpszCode, int nOffset, int nOrderNum, LPCWSTR lpszModule);
-		DWORD	FindCALL(LPCSTR lpszCode, int nOffset, DWORD dwModuleAddr, int nMov, int nOrderNum, LPCWSTR lpszModule);
-		DWORD	FindBase(LPCSTR lpszCode, int nOffset, int nMov, int nOrderNum, LPCWSTR lpszModule, DWORD dwAddrLen = 0xFFFFFFFF);
-		DWORD	FindBase_ByCALL(LPCSTR lpszCode, int nOffset, DWORD dwModuleAddr, int nMov, int nOrderNum, LPCWSTR lpszModule, int nBaseOffset, DWORD dwAddrLen = 0xFFFFFFFF);
-		BOOL	SearchBase(LPCSTR szCode, DWORD * pArray, UINT& puLen, LPCWSTR lpszModule);
-		DWORD	GetImageSize(HMODULE hm);
-		BOOL	CL_sunday(DWORD* pKey, UINT uKeyLen, BYTE* pCode, UINT uCodeLen, std::vector<int>& vlst);
-		int		GetWord_By_Char(BYTE dwWord, DWORD* pKey, UINT uKeyLen);
-		BOOL	CompCode(const DWORD * pCode, const BYTE * pMem, UINT uLen);
-#endif // _WIN64
-
+	public:
+		DWORD	FindAddr(_In_ LPCSTR lpszCode, _In_ int nOffset, _In_ int nOrderNum, _In_ LPCWSTR lpszModule);
+		DWORD	FindCALL(_In_ LPCSTR lpszCode, _In_ int nOffset, _In_ int nMov, _In_ int nOrderNum, _In_ LPCWSTR lpszModule);
+		DWORD	FindBase(_In_ LPCSTR lpszCode, _In_ int nOffset, _In_ int nMov, _In_ int nOrderNum, _In_ LPCWSTR lpszModule, DWORD dwAddrLen = 0xFFFFFFFF);
+		DWORD	FindBase_ByCALL(_In_ LPCSTR lpszCode, _In_ int nOffset, _In_ int nMov, _In_ int nOrderNum, _In_ LPCWSTR lpszModule, _In_ int nBaseOffset, _In_opt_ DWORD dwAddrLen = 0xFFFFFFFF);
 	private:
-
+		BOOL	SearchBase(_In_ LPCSTR szCode, _Out_ DWORD * pArray, _Out_ UINT& puLen, _In_ LPCWSTR lpszModule);
+		DWORD	GetImageSize(_In_ DWORD dwImageBase);
+		BOOL	CL_sunday(_In_ DWORD* pKey, _In_ UINT uKeyLen, _In_ BYTE* pCode, _In_ UINT uCodeLen, _Out_ std::vector<int>& vlst);
+		int		GetWord_By_Char(_In_ BYTE dwWord, _In_ DWORD* pKey, _In_ UINT uKeyLen);
+		BOOL	CompCode(_In_ const DWORD * pCode, _In_ const BYTE * pMem, _In_ UINT uLen);
+#endif // _WIN64
 	};
 }
 

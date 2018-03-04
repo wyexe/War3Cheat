@@ -15,12 +15,12 @@ namespace libTools
 		~CCharacter() = default;
 
 		template<typename T>
-		static void strcpy_my(_In_ T * dest, _In_ CONST T * src)
+		static void strcpy_my(_In_ T * dest, _In_ CONST T * src, _In_opt_ SIZE_T MaxSize = 1024)
 		{
 			CException::InvokeAction(__FUNCTIONW__, [&]
 			{
 				size_t len = strlen_my(src);
-				for (size_t i = 0; i < len; ++i)
+				for (size_t i = 0; i < len && i < MaxSize; ++i)
 				{
 					*(dest + i) = *(src + i);
 				}

@@ -1,5 +1,5 @@
-#ifndef __LIBTOOLS_LOG_LOGEXPRESSIONCALC_H__
-#define __LIBTOOLS_LOG_LOGEXPRESSIONCALC_H__
+#ifndef __LIBTOOLS_LOGLIB_LOGEXPRESSIONCALC_H__
+#define __LIBTOOLS_LOGLIB_LOGEXPRESSIONCALC_H__
 
 #include <Windows.h>
 #include <stack>
@@ -144,4 +144,4 @@ namespace libTools
 	};
 }
 
-#endif // !__LIBTOOLS_LOG_LOGEXPRESSIONCALC_H__
+#endif // !__LIBTOOLS_LOGLIB_LOGEXPRESSIONCALC_H__

@@ -30,7 +30,7 @@ namespace libTools
 		static WORD		ReadWORD(_In_ UINT_PTR dwAddr);
 		static BYTE		ReadBYTE(_In_ UINT_PTR dwAddr);
 		static FLOAT	ReadFloat(_In_ UINT_PTR dwAddr);
-		static DOUBLE	ReadDouble(_In_ UINT_PTR dwAddr);
+		static double	ReadDouble(_In_ UINT_PTR dwAddr);
 
 		template<typename WriteAddrType, typename WriteValueType>
 		static BOOL		WriteMemoryValue(_In_ WriteAddrType dwAddr, _In_ WriteValueType dwValue)
