@@ -13,7 +13,7 @@ CConsoleShareMemory& CConsoleShareMemory::GetInstance()
 	return Instance;
 }
 
-BOOL CConsoleShareMemory::Create()
+BOOL CConsoleShareMemory::Create(_In_ HANDLE hStdOut)
 {
 	_hFileMap = ::CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, NULL, sizeof(ShareContent), SHAREMEMORYNAME);
 	if (_hFileMap == NULL)
@@ -33,6 +33,7 @@ BOOL CConsoleShareMemory::Create()
 
 	ZeroMemory(_pShareContent, sizeof(ShareContent));
 	::GetCurrentDirectoryW(MAX_PATH, _pShareContent->wszConsolePath);
+	_pShareContent->hStdOut = hStdOut;
 	return TRUE;
 }
 
@@ -52,6 +53,11 @@ VOID CConsoleShareMemory::SetActionWithParam(_In_ em_Action_Type emActionType, _
 	WaitForGameReadData();
 	std::copy(wsParam.begin(), wsParam.end(), _pShareContent->wszParam);
 	_pShareContent->emActionType = emActionType;
+}
+
+BOOL CConsoleShareMemory::IsConnectedGame() CONST
+{
+	return _pShareContent->bLive;
 }
 
 VOID CConsoleShareMemory::WaitForGameReadData() CONST

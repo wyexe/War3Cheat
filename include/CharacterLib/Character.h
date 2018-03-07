@@ -123,7 +123,7 @@ namespace libTools
 		static std::wstring ASCIIToUnicode(_In_ CONST std::string& pszText);
 
 		//
-		static std::wstring UTF8ToUnicode(_In_ CONST std::string pszText);
+		static std::wstring UTF8ToUnicode(_In_ CONST std::string& pszText);
 
 		//
 		static std::string UnicodeToUTF8(_In_ CONST std::wstring& wsText);

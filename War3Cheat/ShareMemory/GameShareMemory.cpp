@@ -1,7 +1,9 @@
 #include <stdafx.h>
 #include "GameShareMemory.h"
 #include <CharacterLib/Character.h>
+#include <LogLib/Log.h>
 
+#define _SELF L"GameShareMemory.cpp"
 CGameShareMemory::~CGameShareMemory()
 {
 	Release();
@@ -30,6 +32,7 @@ BOOL CGameShareMemory::Run()
 	}
 
 
+	_pShareContent->bLive = TRUE;
 	return TRUE;
 }
 
@@ -71,25 +74,15 @@ DWORD CGameShareMemory::CheatActionContent::GetChangeItemParamToItemId() CONST
 	std::wstring wsText = wsParam;
 	std::vector<std::wstring> Vec;
 
-	if (!libTools::CCharacter::SplitFormatText(libTools::CCharacter::Trim(wsText), L"-* -*", Vec) || Vec.size() != 2)
+	if (!libTools::CCharacter::SplitFormatText(libTools::CCharacter::Trim(wsText), L"* -* -*", Vec) || Vec.size() != 3)
 	{
 		::MessageBoxW(NULL, libTools::CCharacter::MakeFormatText(L"无效的参数[%s]", wsParam.c_str()).c_str(), L"Error", NULL);
 		return 0;
 	}
 
-	std::string szItemId = libTools::CCharacter::UnicodeToASCII(Vec.at(1));
-	if (szItemId.length() != 4)
-	{
-		::MessageBoxW(NULL, libTools::CCharacter::MakeFormatText(L"无效的物品ID[%s]", Vec.at(1).c_str()).c_str(), L"Error", NULL);
-		return 0;
-	}
 
-	DWORD dwItemId = 0;
-	dwItemId |= szItemId.at(0) << 0x18 & 0xFF;
-	dwItemId |= szItemId.at(1) << 0x10 & 0xFF;
-	dwItemId |= szItemId.at(2) << 0x08 & 0xFF;
-	dwItemId |= szItemId.at(3) & 0xFF;
-	return dwItemId;
+	std::reverse(Vec.at(2).begin(), Vec.at(2).end());
+	return *reinterpret_cast<CONST DWORD*>(libTools::CCharacter::UnicodeToASCII(Vec.at(2)).c_str());
 }
 
 DWORD CGameShareMemory::CheatActionContent::GetChangeItemParamToItemIndex() CONST
@@ -98,11 +91,11 @@ DWORD CGameShareMemory::CheatActionContent::GetChangeItemParamToItemIndex() CONS
 	std::wstring wsText = wsParam;
 	std::vector<std::wstring> Vec;
 
-	if (!libTools::CCharacter::SplitFormatText(libTools::CCharacter::Trim(wsText), L"-* -*", Vec) || Vec.size() != 2)
+	if (!libTools::CCharacter::SplitFormatText(libTools::CCharacter::Trim(wsText), L"* -* -*", Vec) || Vec.size() != 3)
 	{
 		::MessageBoxW(NULL, libTools::CCharacter::MakeFormatText(L"无效的参数[%s]", wsParam.c_str()).c_str(), L"Error", NULL);
 		return 0;
 	}
 
-	return std::stoi(Vec.at(0));
+	return std::stoi(Vec.at(1));
 }

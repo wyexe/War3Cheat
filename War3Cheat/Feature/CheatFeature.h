@@ -29,7 +29,7 @@ private:
 		{
 			ItemName = pszItemName;
 			ItemDetail = pszItemDetail;
-			pszItemId = pszItemId;
+			ItemId = pszItemId;
 		}
 	};
 public:

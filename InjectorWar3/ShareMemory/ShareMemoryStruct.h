@@ -17,10 +17,11 @@ enum em_Action_Type
 
 struct ShareContent
 {
+	HANDLE hStdOut;
 	em_Action_Type emActionType;
 	WCHAR wszParam[MAX_PATH];
 	WCHAR wszConsolePath[MAX_PATH];
-
+	BOOL  bLive;
 };
 
 #endif // !__WAR3CHEAT_INJECTORWAR3_SHAREMEMORY_SHAREMEMORYSTRUCT_H__

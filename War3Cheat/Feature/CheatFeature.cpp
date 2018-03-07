@@ -2,9 +2,10 @@
 #include "CheatFeature.h"
 #include "../ShareMemory/GameShareMemory.h"
 #include <ExceptionLib/Exception.h>
-#include <HookLib/IATHook/IATHook.h>
+#include <HookLib/InlineHook/InlineHook.h>
 #include <CharacterLib/Character.h>
 #include <FileLib/File.h>
+#include <LogLib/Log.h>
 
 #pragma comment(lib,"ExceptionLib.lib")
 #pragma comment(lib,"HookLib.lib")
@@ -15,6 +16,7 @@ std::queue<CCheatFeature::ThreadMethodInfo> CCheatFeature::_QueMethodPtr;;
 CRITICAL_SECTION CCheatFeature::_QueCrtSection;
 CCheatFeature::PeekMessageAPtr CCheatFeature::_OldPeekMessagePtr = nullptr;
 
+#define _SELF L"CheatFeature.cpp"
 CCheatFeature::CCheatFeature()
 {
 
@@ -145,7 +147,7 @@ VOID CCheatFeature::SetSelectedObjectAttackType(_In_ DWORD dwSelectedGameObject)
 		return;
 	}
 
-	static DWORD dwPowerTypeOffset2 = _SearchBinary.FindBase("C7??????????01000000FF??8B??????????85", 0x6F353857 - 0x6F353887, 0x2, 0x0, L"Game.dll");
+	static DWORD dwPowerTypeOffset2 = _SearchBinary.FindBase("C7??????????01000000FF??8B??????????85", 0x6F353857 - 0x6F353887, 0x3, 0x0, L"Game.dll");
 	if (dwPowerTypeOffset2 == 0)
 	{
 		::MessageBoxW(NULL, L"dwPowerTypeOffset2 = 0", L"Error", NULL);
@@ -332,7 +334,7 @@ VOID CCheatFeature::PrintItem()
 	VecItemContent.clear();
 	VecItemContent.reserve(1024 * 100);
 
-
+	ULONGLONG ulTick = ::GetTickCount64();
 	PushPtrToMainThread([=] 
 	{
 		libTools::CException::InvokeAction(__FUNCTIONW__, [=] 
@@ -360,14 +362,15 @@ VOID CCheatFeature::PrintItem()
 					dwNameVirtualTable = GetNameVirtualTable(dwNameFlag);
 					if (dwNameVirtualTable == 0)
 					{
-						CHAR szText[32] = { 0 };
-						libTools::CCharacter::strcpy_my(szText, reinterpret_cast<CONST CHAR*>(&dwNameFlag), 4);
+						//CHAR szText[32] = { 0 };
+						//libTools::CCharacter::strcpy_my(szText, reinterpret_cast<CONST CHAR*>(&dwNameFlag), 4);
 						continue;
 					}
 
 					break;
 				}
 			}
+
 
 			std::vector<int> Vec;
 			for (int i = '0'; i <= '9'; ++i)
@@ -412,11 +415,9 @@ VOID CCheatFeature::PrintItem()
 									continue;
 
 
-								CHAR szText[32] = { 0 };
-								DWORD dwItemId = d << 0x18 | c << 0x10 | b << 0x8 | a;
-								libTools::CCharacter::strcpy_my(szText, reinterpret_cast<CONST CHAR*>(&dwItemId), 4);
-
-								VecItemContent.emplace_back(pszItemName, pszItemDetail, szText);
+								CHAR szItemId[32] = { 0 };
+								*reinterpret_cast<DWORD*>(szItemId) = d << 0x18 | c << 0x10 | b << 0x8 | a;
+								VecItemContent.emplace_back(pszItemName, pszItemDetail, szItemId);
 							}
 						}
 					}
@@ -425,6 +426,7 @@ VOID CCheatFeature::PrintItem()
 		});
 	});
 
+	LOG_C_D(L"VecItemContent.size=%d, SpentTime=%dms", VecItemContent.size(), static_cast<DWORD>(::GetTickCount64() - ulTick));
 	OutputItemName(VecItemContent);
 }
 
@@ -439,7 +441,7 @@ VOID CCheatFeature::ChangeItem(_In_ DWORD dwSelectedGameObject, _In_ DWORD dwIte
 			return;
 		}
 
-
+		
 		libTools::CMemory::WriteDWORD(dwItemObject + 0x30, dwItemId);
 	});
 }
@@ -451,16 +453,19 @@ DWORD CCheatFeature::GetSelectedGameObject()
 
 BOOL CCheatFeature::Initialize()
 {
-	::InitializeCriticalSection(&_QueCrtSection);
-
-	if (!libTools::CIATHook::Hook("user32.dll", "PeekMessageA", reinterpret_cast<LPVOID>(PeekMessage_), reinterpret_cast<LPVOID *>(&_OldPeekMessagePtr)))
+	return libTools::CException::InvokeFunc<BOOL>(__FUNCTIONW__, [] 
 	{
-		::MessageBoxW(NULL, L"Hook PeekMessage Faild!!!", L"Error", NULL);
-		return FALSE;
-	}
+		::InitializeCriticalSection(&_QueCrtSection);
 
+		if (!libTools::CInlineHook::Hook(reinterpret_cast<LPVOID>(::PeekMessageA), reinterpret_cast<LPVOID>(PeekMessage_), reinterpret_cast<LPVOID *>(&_OldPeekMessagePtr)))
+		{
+			::MessageBoxW(NULL, L"Hook PeekMessage Faild!!!", L"Error", NULL);
+			return FALSE;
+		}
 
-	return TRUE;
+		LOG_C_D(L"Initlize....");
+		return TRUE;
+	});
 }
 
 VOID CCheatFeature::Release()
@@ -469,7 +474,7 @@ VOID CCheatFeature::Release()
 	{
 		::DeleteCriticalSection(&_QueCrtSection);
 
-		libTools::CIATHook::Hook("user32.dll", "PeekMessageA", _OldPeekMessagePtr, nullptr);
+		libTools::CInlineHook::UnHook(reinterpret_cast<LPVOID>(::PeekMessageA), _OldPeekMessagePtr);
 		_OldPeekMessagePtr = nullptr;
 	}
 }
@@ -702,7 +707,7 @@ VOID CCheatFeature::OutputItemName(_In_ CONST std::vector<ItemContent>& Vec) CON
 		wsText += L"\r\n";
 	}
 	libTools::CFile::WriteUnicodeFile(wszPath, wsText);
-	::MessageBoxW(NULL, L"–¥»ÎÕÍ±œ!", L"Tip", NULL);
+	LOG_C_D(L"Write File Done!");
 }
 
 BOOL WINAPI CCheatFeature::PeekMessage_(_Out_ LPMSG lpMsg, _In_opt_ HWND hWnd, _In_ UINT wMsgFilterMin, _In_ UINT wMsgFilterMax, _In_ UINT wRemoveMsg)

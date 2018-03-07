@@ -12,7 +12,7 @@ public:
 
 	static CConsoleShareMemory& GetInstance();
 
-	BOOL Create();
+	BOOL Create(_In_ HANDLE hStdOut);
 
 	CONST std::wstring& GetErrorText() CONST;
 
@@ -21,6 +21,9 @@ public:
 
 	//
 	VOID SetActionWithParam(_In_ em_Action_Type emActionType, _In_ CONST std::wstring& wsParam);
+
+	//
+	BOOL IsConnectedGame() CONST;
 private:
 	//
 	VOID WaitForGameReadData() CONST;
