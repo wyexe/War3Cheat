@@ -1,6 +1,12 @@
 # War3Cheat
 https://zhuanlan.zhihu.com/p/33361106
 <br>
+-------------------------------------------------------<br>
+this project depend on https://github.com/VideoCardGuy/libTools <br>
+Log Tools on https://github.com/VideoCardGuy/libTools/tree/master/LogClientForm <br>
+
+
+<br>
 ![image](https://github.com/VideoCardGuy/War3Cheat/raw/master/screenshot/1.png)<br><br><br>
 ![image](https://github.com/VideoCardGuy/War3Cheat/raw/master/screenshot/2.png)<br><br><br>
 ![image](https://github.com/VideoCardGuy/War3Cheat/raw/master/screenshot/3.png)<br><br><br>
